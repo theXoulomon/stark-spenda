@@ -7,6 +7,8 @@ import { Toaster } from "react-hot-toast";
 import { StarknetConfig, starkscan } from "@starknet-react/core";
 import { Header } from "~~/components/Header";
 
+import {Form} from "~~/components/Form"
+
 import { appChains, connectors } from "~~/services/web3/connectors";
 import provider from "~~/services/web3/provider";
 import { useNativeCurrencyPrice } from "~~/hooks/scaffold-stark/useNativeCurrencyPrice";
