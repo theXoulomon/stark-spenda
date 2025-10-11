@@ -5,7 +5,7 @@ import { BlockNumber } from "starknet";
 import { Abi } from "abi-wan-kanabi";
 import { formatUnits } from "ethers";
 
-type UseScaffoldTokenBalanceProps = {
+type UseTokenBalanceProps = {
   address?: Address | string;
   tokenTicker?: string;
 };
@@ -27,7 +27,7 @@ type UseScaffoldTokenBalanceProps = {
  * @see {@link https://scaffoldstark.com/docs/hooks/useScaffoldStrkBalance}
  */
 
-const useScaffoldTokenBalance = ({ address, tokenTicker }: UseScaffoldTokenBalanceProps) => {
+const useTokenBalance = ({ address, tokenTicker }: UseTokenBalanceProps) => {
   const { data: deployedContract } = useDeployedContractInfo(tokenTicker);
 
   const { data, ...props } = useReadContract({
@@ -51,4 +51,4 @@ const useScaffoldTokenBalance = ({ address, tokenTicker }: UseScaffoldTokenBalan
   };
 };
 
-export default useScaffoldTokenBalance;
+export default useTokenBalance;

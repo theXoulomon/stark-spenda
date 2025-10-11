@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Address } from "@starknet-react/chains";
-import useScaffoldStrkBalance from "~~/hooks/useScaffoldTokenBalance";
+import useTokenBalance from "~~/hooks/useTokenBalance";
 
 type TokenBalanceProps = {
   address?: Address;
@@ -14,13 +14,12 @@ type TokenBalanceProps = {
  * Display (Stables) balance of an address.
  */
 export const TokenBalance = ({ address, tokenTicker, className = "" }: TokenBalanceProps) => {
-  const strkPrice = useGlobalState((state) => state.nativeCurrencyPrice);
   const {
     formatted: tokenFormatted,
     isLoading: tokenIsLoading,
     isError: tokenIsError,
     symbol: tokenSymbol,
-  } = useScaffoldTokenkBalance({
+  } = useTokenBalance({
     address,
     tokenTicker
   });
@@ -37,7 +36,7 @@ export const TokenBalance = ({ address, tokenTicker, className = "" }: TokenBala
     );
   }
 
-  if (strkIsError) {
+  if (tokenIsError) {
     return (
       <div
         className={`border-2 border-gray-400 rounded-md px-2 flex flex-col items-center max-w-fit cursor-pointer`}
