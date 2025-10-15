@@ -1,714 +1,861 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from 'react';
+import axios, { AxiosError } from 'axios';
 import { Address } from "@starknet-react/chains";
 import { useAccount } from "~~/hooks/useAccount";
-import axios from 'axios';
+import { TokenBalance } from "~~/components/scaffold-stark/TokenBalance";
+import { useTheme } from "next-themes";
 
+// ==================== TYPES ====================
+interface Token {
+  symbol: string;
+  name: string;
+  decimals: number;
+  contract: string;
+}
 
+interface Currency {
+  code: string;
+  name: string;
+  symbol: string;
+}
 
-const CONSTANTS = {
-    // API Endpoints (local proxy)
-    LAYERSWAP_BASE_URL: 'https://api.layerswap.io/api/v2',
+interface Institution {
+  code: string;
+  name: string;
+}
 
-    PAYCREST_BASE_URL: 'https://api.paycrest.io/v1',
-    
-    // Contract Addresses (Starknet)
-    STABLECOIN_CONTRACTS: {
-        USDC: '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8',
-        USDT: '0x068f5c6a61780768455de69077e917e519ada645a524dd210e42a555b3a4e6d4',
-        DAI: '0x05574eb6b8789a91466f902c380d978e472db68170ff82a5b650b95a58ddf4ad',
-        ETH: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7'
+interface SwapQuote {
+  id: string;
+  quote: {
+    min_receive_amount: string;
+  };
+}
+
+interface WalletState {
+  instance: any | null;
+  address: string | null;
+  isConnected: boolean;
+}
+
+interface TradeFormData {
+  token: string;
+  amount: string;
+  currency: string;
+  bank: string;
+  accountNumber: string;
+  accountName: string;
+  isFiatInput: boolean;
+}
+
+// ==================== CONFIGURATION ====================
+const CONFIG = {
+  API: {
+    LAYERSWAP: 'https://api.layerswap.io/api/v2',
+    PAYCREST: 'https://api.paycrest.io/v1',
+  },
+  KEYS: {
+    LAYERSWAP: process.env.NEXT_PUBLIC_LAYERSWAP_API_KEY || '',
+    PAYCREST: process.env.NEXT_PUBLIC_PAYCREST_API_KEY || '',
+  },
+  NETWORKS: {
+    SOURCE: 'STARKNET_MAINNET',
+    DESTINATION: 'BASE_MAINNET',
+  },
+  BASE_ADDRESS: '0xb39b7c02372dBBb003c05D6b4ABA2eC68842934D',
+  TOKENS: [
+    {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+      contract: '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8',
     },
-    
-    // Base Network Configuration
-    BASE_ADDRESS: '0xb39b7c02372dBBb003c05D6b4ABA2eC68842934D',
+    {
+      symbol: 'USDT',
+      name: 'Tether',
+      decimals: 6,
+      contract: '0x068f5c6a61780768455de69077e917e519ada645a524dd210e42a555b3a4e6d4',
+    },
+    {
+      symbol: 'DAI',
+      name: 'Dai',
+      decimals: 18,
+      contract: '0x05574eb6b8789a91466f902c380d978e472db68170ff82a5b650b95a58ddf4ad',
+    },
+    {
+      symbol: 'ETH',
+      name: 'Ethereum',
+      decimals: 18,
+      contract: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7',
+    },
+  ] as Token[],
+} as const;
 
+// ==================== UTILITIES ====================
+class ApiError extends Error {
+  constructor(message: string, public statusCode?: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
-    
-    // Supported Networks
-    SOURCE_NETWORK: 'STARKNET_MAINNET',
-    DESTINATION_NETWORK: 'BASE_MAINNET'
+const formatters = {
+  address: (address: string): string => {
+    if (!address) return '';
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  },
+
+  amount: (amount: string | number, decimals = 2): string => {
+    return Number(amount).toFixed(decimals);
+  },
+
+  decimalToHex: (decimal: number, padding = 0): string => {
+    return '0x' + decimal.toString(16).padStart(padding, '0');
+  },
 };
 
-// ==================== UTILITY FUNCTIONS ====================
-const utils = {
-    // API Error Handling
-    handleApiError: (error, customMessage) => {
-        console.error(customMessage || 'API Error:', error);
-        if (error.response) {
-            const status = error.response.status;
-            if (status === 400) {
-                return 'Invalid request. Please check your input.';
-            } else if (status === 401) {
-                return 'Authentication failed. Please check your API key.';
-            } else if (status === 429) {
-                return 'Rate limit exceeded. Please try again later.';
-            } else if (status >= 500) {
-                return 'Server error. Please try again later.';
-            }
-        } else if (error.request) {
-            return 'Network error. Please check your connection.';
+const errorHandler = {
+  parse: (error: unknown): string => {
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError<{ error?: string; message?: string }>;
+      
+      if (axiosError.response) {
+        const { status, data } = axiosError.response;
+        
+        if (data?.error) return data.error;
+        if (data?.message) return data.message;
+        
+        switch (status) {
+          case 400:
+            return 'Invalid request. Please check your input.';
+          case 401:
+            return 'Authentication failed. Please check your API credentials.';
+          case 429:
+            return 'Too many requests. Please try again later.';
+          case 500:
+          case 502:
+          case 503:
+            return 'Service temporarily unavailable. Please try again.';
+          default:
+            return `Request failed with status ${status}`;
         }
-        return 'An unexpected error occurred.';
-    },
-    
-    // Retry logic for API calls
-    retryApiCall: async (apiCall, maxRetries = 3, delay = 1000) => {
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                return await apiCall();
-            } catch (error) {
-                if (attempt === maxRetries) throw error;
-                await new Promise(resolve => setTimeout(resolve, delay * attempt));
-            }
-        }
+      }
+      
+      if (axiosError.request) {
+        return 'Network error. Please check your connection.';
+      }
     }
     
+    if (error instanceof Error) {
+      return error.message;
+    }
+    
+    return 'An unexpected error occurred';
+  },
+};
+
+// ==================== API SERVICES ====================
+const layerSwapService = {
+  createSwap: async (params: {
+    sourceToken: string;
+    destinationToken: string;
+    amount: string;
+  }): Promise<SwapQuote> => {
+    const response = await axios.post(
+      `${CONFIG.API.LAYERSWAP}/swaps`,
+      {
+        source_network: CONFIG.NETWORKS.SOURCE,
+        source_token: params.sourceToken,
+        destination_token: params.destinationToken,
+        destination_network: CONFIG.NETWORKS.DESTINATION,
+        refuel: true,
+        amount: params.amount,
+        destination_address: CONFIG.BASE_ADDRESS,
+      },
+      {
+        headers: {
+          'X-LS-APIKEY': CONFIG.KEYS.LAYERSWAP,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    return response.data.data;
+  },
+
+  getSwapDetails: async (swapId: string): Promise<any> => {
+    const response = await axios.get(
+      `${CONFIG.API.LAYERSWAP}/swaps/${swapId}`,
+      {
+        headers: {
+          'X-LS-APIKEY': CONFIG.KEYS.LAYERSWAP,
+        },
+      }
+    );
+    return response.data.data;
+  },
+};
+
+const paycrestService = {
+  getCurrencies: async (): Promise<Currency[]> => {
+    const response = await axios.get(`${CONFIG.API.PAYCREST}/currencies`, {
+      headers: { 'API-Key': CONFIG.KEYS.PAYCREST },
+    });
+    return response.data.data;
+  },
+
+  getInstitutions: async (currency: string): Promise<Institution[]> => {
+    const response = await axios.get(
+      `${CONFIG.API.PAYCREST}/institutions/${currency}`,
+      {
+        headers: { 'API-Key': CONFIG.KEYS.PAYCREST },
+      }
+    );
+    return response.data.data;
+  },
+
+  verifyAccount: async (
+    institution: string,
+    accountIdentifier: string
+  ): Promise<string> => {
+    const response = await axios.post(
+      `${CONFIG.API.PAYCREST}/verify-account`,
+      { institution, accountIdentifier },
+      {
+        headers: {
+          'API-Key': CONFIG.KEYS.PAYCREST,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    return response.data.data;
+  },
+
+  getRate: async (
+    token: string,
+    amount: string,
+    currency: string,
+    network = 'base'
+  ): Promise<number> => {
+    const response = await axios.get(
+      `${CONFIG.API.PAYCREST}/rates/${token}/${amount}/${currency}?network=${network}`,
+      {
+        headers: { 'API-Key': CONFIG.KEYS.PAYCREST },
+      }
+    );
+    return response.data.data;
+  },
+
+  createOrder: async (orderData: any): Promise<any> => {
+    const response = await axios.post(
+      `${CONFIG.API.PAYCREST}/sender/orders`,
+      orderData,
+      {
+        headers: {
+          'API-Key': CONFIG.KEYS.PAYCREST,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    return response.data.data;
+  },
+};
+
+const baseService = {
+  completeTrade: async (tradeData: {
+    swapId: string;
+    token: string;
+    currency: string;
+    bankCode: string;
+    accountIdentifier: string;
+    accountName: string;
+  }): Promise<{ success: boolean; txHash: string }> => {
+    const response = await axios.post('/api/complete-base-trade', tradeData);
+    return response.data;
+  },
 };
 
 // ==================== CUSTOM HOOKS ====================
+const useAsyncOperation = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-// LayerSwap API Hook
-const useLayerSwap = () => {
-    const [loading, setLoading] = React.useState(false);
-    const [error, setError] = React.useState(null);
-    
-    const createSwap = async (params) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await axios.post(
-                `${CONSTANTS.API_BASE_URL}/api/layerswap/swaps`,
-                {
-                    source_network: CONSTANTS.SOURCE_NETWORK,
-                    source_token: params.source_token,
-                    destination_token: params.destination_token,
-                    destination_network: CONSTANTS.DESTINATION_NETWORK,
-                    refuel: true,
-                    amount: params.amount,
-                    destination_address: CONSTANTS.BASE_ADDRESS
-                }
-            );
-            return response.data.data;
-        } catch (err) {
-            setError(utils.handleApiError(err, 'Failed to create swap'));
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    const getSwapDetails = async (swapId) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await axios.get(
-                `${CONSTANTS.API_BASE_URL}/api/layerswap/swaps/${swapId}`
-            );
-            return response.data.data;
-        } catch (err) {
-            setError(utils.handleApiError(err, 'Failed to get swap details'));
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    return { createSwap, getSwapDetails, loading, error };
+  const execute = useCallback(async <T,>(
+    operation: () => Promise<T>
+  ): Promise<T | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await operation();
+      return result;
+    } catch (err) {
+      const errorMessage = errorHandler.parse(err);
+      setError(errorMessage);
+      console.error('Operation failed:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const reset = useCallback(() => {
+    setLoading(false);
+    setError(null);
+  }, []);
+
+  return { loading, error, execute, reset };
 };
 
-// Paycrest API Hook
-const usePaycrest = () => {
-    const [loading, setLoading] = React.useState(false);
-    const [error, setError] = React.useState(null);
-    
-    const getCurrencies = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await axios.get(
-                `${CONSTANTS.API_BASE_URL}/api/paycrest/currencies`
-            );
-            return response.data.data;
-        } catch (err) {
-            setError(utils.handleApiError(err, 'Failed to fetch currencies'));
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    const getInstitutions = async (currency) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await axios.get(
-                `${CONSTANTS.API_BASE_URL}/api/paycrest/institutions/${currency}`
-            );
-            return response.data.data;
-        } catch (err) {
-            setError(utils.handleApiError(err, 'Failed to fetch institutions'));
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    const verifyAccount = async (institution, accountIdentifier) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await axios.post(
-                `${CONSTANTS.API_BASE_URL}/api/paycrest/verify-account`,
-                {
-                    institution,
-                    accountIdentifier
-                }
-            );
-            return response.data.data;
-        } catch (err) {
-            setError(utils.handleApiError(err, 'Failed to verify account'));
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    const getRate = async (token, amount, currency, network = 'base') => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await axios.get(
-                `${CONSTANTS.API_BASE_URL}/api/paycrest/rates/${token}/${amount}/${currency}?network=${network}`
-            );
-            return response.data.data;
-        } catch (err) {
-            setError(utils.handleApiError(err, 'Failed to fetch rate'));
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    const createOrder = async (orderData) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await axios.post(
-                `${CONSTANTS.API_BASE_URL}/api/paycrest/sender/orders`,
-                orderData
-            );
-            return response.data.data;
-        } catch (err) {
-            setError(utils.handleApiError(err, 'Failed to create order'));
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    return { getCurrencies, getInstitutions, verifyAccount, getRate, createOrder, loading, error };
-};
-
-// Starknet Wallet Hook
 const useStarknetWallet = () => {
-    const [wallet, setWallet] = React.useState(null);
-    const [address, setAddress] = React.useState(null);
-    const [balance, setBalance] = React.useState('0');
-    const [loading, setLoading] = React.useState(false);
-    const [error, setError] = React.useState(null);
+  const { account, address, status, isConnected } = useAccount();
 
-    
-    const getBalance = async (tokenAddress) => {
-        if (!wallet || !address) return '0';
-        
-        try {
-            const contract = new starknet.Contract(
-                [
-                    {
-                        name: 'balanceOf',
-                        type: 'function',
-                        inputs: [{ name: 'account', type: 'felt' }],
-                        outputs: [{ name: 'balance', type: 'Uint256' }]
-                    }
-                ],
-                tokenAddress,
-                wallet.provider
-            );
-            
-            const balance = await contract.balanceOf(address);
-            return utils.fromBaseUnits(balance.toString(), 6);
-        } catch (err) {
-            console.error('Error fetching balance:', err);
-            return '0';
-        }
-    };
-    
-    const executeTransaction = async (calls) => {
-        if (!wallet) throw new Error('Wallet not connected');
-        
-        try {
-            const result = await wallet.account.execute(calls);
-            return result;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        }
-    };
-    
-    return { wallet, address, balance, loading, error, connectWallet, getBalance, executeTransaction };
+  const executeTransaction = useCallback(
+    async (calls: any[]) => {
+      if (!account) {
+        throw new Error('Wallet not connected');
+      }
+
+      const result = await account.execute(calls);
+      return result;
+    },
+    [account]
+  );
+
+  return {
+    instance: account,
+    address,
+    isConnected,
+    executeTransaction,
+  };
 };
 
 // ==================== UI COMPONENTS ====================
-
-// Stablecoin Selector Component
-const StablecoinSelector = ({ selectedToken, onSelect, balance }) => {
-    const tokens = [
-        { symbol: 'USDC', name: 'USD Coin', decimals: 6 },
-        { symbol: 'USDT', name: 'Tether', decimals: 6 },
-        { symbol: 'DAI', name: 'Dai', decimals: 18 },
-        { symbol: 'ETH', name: 'Ethereum', decimals: 18 }
-    ];
-    
-    return (
-        <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-                Select Stablecoin
-            </label>
-            <select
-                value={selectedToken}
-                onChange={(e) => onSelect(e.target.value)}
-                className="futuristic-input text-white px-4 py-3 rounded-lg w-full focus:outline-none"
-            >
-                {tokens.map(token => (
-                    <option key={token.symbol} value={token.symbol}>
-                        {token.symbol} - {token.name}
-                    </option>
-                ))}
-            </select>
-            {balance && (
-                <div className="mt-2 text-sm text-gray-400">
-                    Balance: {utils.formatAmount(balance)} {selectedToken}
-                </div>
-            )}
-        </div>
-    );
-};
-
-// Currency Selector Component
-const CurrencySelector = ({ selectedCurrency, onSelect, currencies }) => {
-    return (
-        <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-                Select Fiat Currency
-            </label>
-            <select
-                value={selectedCurrency}
-                onChange={(e) => onSelect(e.target.value)}
-                className="futuristic-input text-white px-4 py-3 rounded-lg w-full focus:outline-none"
-                disabled={!currencies.length}
-            >
-                <option value="">Choose currency...</option>
-                {currencies.map(currency => (
-                    <option key={currency.code} value={currency.code}>
-                        {currency.name} ({currency.symbol})
-                    </option>
-                ))}
-            </select>
-        </div>
-    );
-};
-
-// Bank Selector Component
-const BankSelector = ({ selectedBank, onSelect, banks }) => {
-    return (
-        <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-                Select Bank Institution
-            </label>
-            <select
-                value={selectedBank}
-                onChange={(e) => onSelect(e.target.value)}
-                className="futuristic-input text-white px-4 py-3 rounded-lg w-full focus:outline-none"
-                disabled={!banks.length}
-            >
-                <option value="">Choose bank...</option>
-                {banks.map(bank => (
-                    <option key={bank.code} value={bank.code}>
-                        {bank.name}
-                    </option>
-                ))}
-            </select>
-        </div>
-    );
-};
-
-// Account Input Component
-const AccountInput = ({ value, onChange, accountName, loading }) => {
-    return (
-        <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-                Account Number/Identifier
-            </label>
-            <input
-                type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="futuristic-input text-white px-4 py-3 rounded-lg w-full focus:outline-none"
-                placeholder="Enter account number..."
-            />
-            {accountName && (
-                <div className="mt-2 text-sm text-green-400 fade-in">
-                    ✓ Account Name: {accountName}
-                </div>
-            )}
-            {loading && (
-                <div className="mt-2 text-sm text-blue-400">
-                    Verifying account...
-                </div>
-            )}
-        </div>
-    );
-};
-
-// Trade Form Component
-const TradeForm = ({ 
-    amount, 
-    onAmountChange, 
-    isFiatMode, 
-    onToggleMode, 
-    selectedToken, 
-    selectedCurrency 
+const Button = ({
+  children,
+  onClick,
+  disabled = false,
+  loading = false,
+  variant = 'primary',
+  className = '',
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  variant?: 'primary' | 'secondary';
+  className?: string;
 }) => {
-    return (
-        <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-gray-300">
-                    Trade Amount
-                </label>
-                <div className="flex items-center space-x-2">
-                    <span className={`text-sm ${isFiatMode ? 'text-gray-400' : 'text-white'}`}>
-                        {selectedToken}
-                    </span>
-                    <button
-                        onClick={onToggleMode}
-                        className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFiatMode ? 'translate-x-6' : 'translate-x-1'}`}></span>
-                    </button>
-                    <span className={`text-sm ${isFiatMode ? 'text-white' : 'text-gray-400'}`}>
-                        {selectedCurrency}
-                    </span>
-                </div>
-            </div>
-            <input
-                type="number"
-                value={amount}
-                onChange={(e) => onAmountChange(e.target.value)}
-                className="futuristic-input text-white px-4 py-3 rounded-lg w-full focus:outline-none"
-                placeholder={`Enter amount in ${isFiatMode ? selectedCurrency : selectedToken}...`}
-                min="0"
-                step="0.01"
-            />
+  const baseStyles =
+    'px-6 py-3 rounded-lg font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed';
+  const variantStyles =
+    variant === 'primary'
+      ? 'bg-gradient-to-r from-cyan-500 to-purple-600 text-white hover:shadow-lg hover:scale-105'
+      : 'bg-gray-700 text-white hover:bg-gray-600';
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={`${baseStyles} ${variantStyles} ${className}`}
+    >
+      {loading ? (
+        <div className="flex items-center justify-center space-x-2">
+          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <span>Processing...</span>
         </div>
-    );
+      ) : (
+        children
+      )}
+    </button>
+  );
 };
 
-// Payout Display Component
-const PayoutDisplay = ({ amount, currency, loading }) => {
-    return (
-        <div className="mb-6">
-            <div className="holographic-display rounded-lg p-4">
-                <div className="text-center">
-                    <div className="text-sm text-gray-300 mb-2">Estimated Payout</div>
-                    {loading ? (
-                        <div className="text-2xl font-bold text-blue-400 pulse-animation">
-                            Calculating...
-                        </div>
-                    ) : amount ? (
-                        <div className="text-3xl font-bold text-green-400 neon-text">
-                            {utils.formatAmount(amount)} {currency}
-                        </div>
-                    ) : (
-                        <div className="text-xl text-gray-500">
-                            Enter amount to see payout
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+const Input = ({
+  label,
+  type = 'text',
+  value,
+  onChange,
+  placeholder,
+  disabled = false,
+  helperText,
+  error,
+}: {
+  label: string;
+  type?: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  helperText?: string;
+  error?: string;
+}) => {
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
+
+  return (
+    <div className="mb-6">
+      <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={`${isDarkMode ? 'bg-cyan-500/10 border-cyan-500 text-white focus:shadow-cyan-500/50' : 'bg-blue-50 border-blue-300 text-gray-900 focus:shadow-blue-500/50'} border-2 px-4 py-3 rounded-lg w-full focus:outline-none focus:shadow-lg transition-all disabled:opacity-50`}
+      />
+      {helperText && (
+        <p className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{helperText}</p>
+      )}
+      {error && <p className={`mt-2 text-sm ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{error}</p>}
+    </div>
+  );
 };
 
-// Trade Button Component
-const TradeButton = ({ onClick, loading, disabled, text = "Initiate Trade" }) => {
-    return (
-        <button
-            onClick={onClick}
-            disabled={disabled || loading}
-            className={`neon-button text-white px-8 py-4 rounded-lg font-bold text-xl w-full transition-all duration-300 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
-        >
-            {loading ? (
-                <div className="flex items-center justify-center space-x-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Processing...</span>
-                </div>
+const Select = ({
+  label,
+  value,
+  onChange,
+  options,
+  disabled = false,
+  placeholder = 'Choose an option...',
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+  placeholder?: string;
+}) => {
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
+
+  return (
+    <div className="mb-6">
+      <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+        {label}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className={`${isDarkMode ? 'bg-cyan-500/10 border-cyan-500 text-white focus:shadow-cyan-500/50' : 'bg-blue-50 border-blue-300 text-gray-900 focus:shadow-blue-500/50'} border-2 px-4 py-3 rounded-lg w-full focus:outline-none focus:shadow-lg transition-all disabled:opacity-50`}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
+const Card = ({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => {
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
+
+  return (
+    <div
+      className={`${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl p-8 shadow-2xl border ${className}`}
+    >
+      {children}
+    </div>
+  );
+};
+
+const StatusBadge = ({
+  status,
+  text,
+}: {
+  status: 'connected' | 'disconnected' | 'verified';
+  text: string;
+}) => {
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
+
+  const colors = {
+    connected: 'bg-green-400',
+    disconnected: isDarkMode ? 'bg-gray-500' : 'bg-gray-400',
+    verified: 'bg-blue-400',
+  };
+
+  return (
+    <div className="flex items-center space-x-3">
+      <div
+        className={`w-3 h-3 rounded-full animate-pulse ${colors[status]}`}
+      />
+      <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>{text}</span>
+    </div>
+  );
+};
+
+const PayoutDisplay = ({
+  amount,
+  currency,
+  loading,
+}: {
+  amount: string;
+  currency: string;
+  loading: boolean;
+}) => {
+  return (
+    <div className="mb-6">
+      <div className="bg-gradient-to-r from-cyan-500/20 to-purple-600/20 border border-cyan-500 rounded-lg p-6 backdrop-blur-lg">
+        <div className="text-center">
+          <p className="text-sm text-gray-300 mb-2">Estimated Payout</p>
+          {loading ? (
+            <p className="text-2xl font-bold text-blue-400 animate-pulse">
+              Calculating...
+            </p>
+          ) : amount ? (
+            <p className="text-3xl font-bold text-green-400">
+              {formatters.amount(amount, 2)} {currency}
+            </p>
+          ) : (
+            <p className="text-xl text-gray-500">Enter amount to see payout</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== MAIN COMPONENT ====================
+export default function StarknetOffRamp() {
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
+  const wallet = useStarknetWallet();
+  const operation = useAsyncOperation();
+
+  const [formData, setFormData] = useState<TradeFormData>({
+    token: 'USDC',
+    amount: '',
+    currency: '',
+    bank: '',
+    accountNumber: '',
+    accountName: '',
+    isFiatInput: false,
+  });
+
+  const [appState, setAppState] = useState({
+    currencies: [] as Currency[],
+    institutions: [] as Institution[],
+    estimatedPayout: '',
+    swapQuote: null as SwapQuote | null,
+  });
+
+  // Load initial data
+  useEffect(() => {
+    loadCurrencies();
+  }, []);
+
+  // Load institutions when currency changes
+  useEffect(() => {
+    if (formData.currency) {
+      loadInstitutions();
+    }
+  }, [formData.currency]);
+
+  // Verify account when account number is entered
+  useEffect(() => {
+    if (formData.accountNumber.length >= 10 && formData.bank) {
+      verifyAccount();
+    }
+  }, [formData.accountNumber, formData.bank]);
+
+  // Calculate payout when amount changes
+  useEffect(() => {
+    if (formData.amount && formData.token && formData.currency) {
+      calculatePayout();
+    }
+  }, [formData.amount, formData.token, formData.currency]);
+
+  const updateFormData = (updates: Partial<TradeFormData>) => {
+    setFormData((prev) => ({ ...prev, ...updates }));
+  };
+
+  const loadCurrencies = async () => {
+    const currencies = await operation.execute(() =>
+      paycrestService.getCurrencies()
+    );
+    if (currencies) {
+      setAppState((prev) => ({ ...prev, currencies }));
+    }
+  };
+
+  const loadInstitutions = async () => {
+    const institutions = await operation.execute(() =>
+      paycrestService.getInstitutions(formData.currency)
+    );
+    if (institutions) {
+      setAppState((prev) => ({ ...prev, institutions }));
+    }
+  };
+
+  const verifyAccount = async () => {
+    const accountName = await operation.execute(() =>
+      paycrestService.verifyAccount(formData.bank, formData.accountNumber)
+    );
+    if (accountName) {
+      updateFormData({ accountName });
+    }
+  };
+
+  const calculatePayout = async () => {
+    let cryptoAmount = formData.amount;
+
+    if (formData.isFiatInput) {
+      const rate = await operation.execute(() =>
+        paycrestService.getRate(formData.token, '1', formData.currency)
+      );
+      if (rate) {
+        cryptoAmount = (parseFloat(formData.amount) / rate).toString();
+      } else {
+        return;
+      }
+    }
+
+    const swap = await operation.execute(() =>
+      layerSwapService.createSwap({
+        sourceToken: formData.token,
+        destinationToken: formData.token,
+        amount: cryptoAmount,
+      })
+    );
+
+    if (swap) {
+      const payoutRate = await operation.execute(() =>
+        paycrestService.getRate(
+          formData.token,
+          swap.quote.min_receive_amount,
+          formData.currency
+        )
+      );
+
+      if (payoutRate) {
+        const payout =
+          parseFloat(swap.quote.min_receive_amount) * payoutRate;
+        setAppState((prev) => ({
+          ...prev,
+          swapQuote: swap,
+          estimatedPayout: payout.toString(),
+        }));
+      }
+    }
+  };
+
+  // const handleWalletConnect = async () => {
+  //   // Wallet connection is handled by the useAccount hook and wallet provider
+  //   // No need for manual connect call
+  // };
+
+  const handleTrade = async () => {
+    if (!wallet.instance || !appState.swapQuote) return;
+
+    const result = await operation.execute(async () => {
+      const swapDetails = await layerSwapService.getSwapDetails(
+        appState.swapQuote!.id
+      );
+      const callData = swapDetails.deposit_actions[0].call_data;
+
+      const calls = [
+        {
+          contractAddress: formatters.decimalToHex(
+            callData.contract_address,
+            64
+          ),
+          entrypoint: callData.entrypoint,
+          calldata: callData.calldata.map((item: number) =>
+            formatters.decimalToHex(item, 0)
+          ),
+        },
+      ];
+
+      await wallet.executeTransaction(calls);
+
+      const baseResult = await baseService.completeTrade({
+        swapId: appState.swapQuote!.id,
+        token: formData.token,
+        currency: formData.currency,
+        bankCode: formData.bank,
+        accountIdentifier: formData.accountNumber,
+        accountName: formData.accountName,
+      });
+
+      return baseResult;
+    });
+
+    if (result) {
+      alert(`Trade completed successfully! Tx Hash: ${result.txHash}`);
+    }
+  };
+
+  const isFormValid =
+    wallet.isConnected &&
+    formData.currency &&
+    formData.bank &&
+    formData.accountNumber &&
+    formData.amount &&
+    formData.accountName;
+
+  return (
+    <div className={`min-h-screen p-4 ${isDarkMode ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-blue-50 to-indigo-100'}`}>
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1
+            className={`text-4xl font-bold mb-2 tracking-wider ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+            style={{ fontFamily: 'Orbitron, sans-serif' }}
+          >
+            STARKNET OFF-RAMP
+          </h1>
+          <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            Bridge your stablecoins from Starknet to fiat currencies
+          </p>
+        </div>
+
+        <Card>
+          {/* Wallet Connection */}
+          {/* <div className="mb-6">
+            {!wallet.isConnected ? (
+              <Button
+                onClick={handleWalletConnect}
+                loading={operation.loading}
+                className="w-full text-lg"
+              >
+                Connect Starknet Wallet
+              </Button>
             ) : (
-                text
+              <div className={`flex items-center justify-between rounded-lg p-4 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                <StatusBadge status="connected" text="Connected" />
+                <span className={`font-mono ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {formatters.address(wallet.address || '')}
+                </span>
+              </div>
             )}
-        </button>
-    );
-};
+          </div> */}
 
-// ==================== MAIN APPLICATION ====================
-const App = () => {
-    // Wallet state
-    const { wallet, address, connectWallet, getBalance, executeTransaction } = useStarknetWallet();
-    
-    // API hooks
-    const { createSwap, getSwapDetails } = useLayerSwap();
-    const { getCurrencies, getInstitutions, verifyAccount, getRate, createOrder } = usePaycrest();
-    
-    // UI state
-    const [selectedToken, setSelectedToken] = React.useState('USDC');
-    const [tokenBalance, setTokenBalance] = React.useState('0');
-    const [currencies, setCurrencies] = React.useState([]);
-    const [selectedCurrency, setSelectedCurrency] = React.useState('');
-    const [banks, setBanks] = React.useState([]);
-    const [selectedBank, setSelectedBank] = React.useState('');
-    const [accountIdentifier, setAccountIdentifier] = React.useState('');
-    const [accountName, setAccountName] = React.useState('');
-    const [tradeAmount, setTradeAmount] = React.useState('');
-    const [isFiatMode, setIsFiatMode] = React.useState(false);
-    const [estimatedPayout, setEstimatedPayout] = React.useState('');
-    const [loading, setLoading] = React.useState(false);
-    const [swapData, setSwapData] = React.useState(null);
-    
-    // Load currencies on mount
-    React.useEffect(() => {
-        loadCurrencies();
-    }, []);
-    
-    // Load token balance when wallet or token changes
-    React.useEffect(() => {
-        if (address && selectedToken) {
-            loadTokenBalance();
-        }
-    }, [address, selectedToken]);
-    
-    // Load banks when currency changes
-    React.useEffect(() => {
-        if (selectedCurrency) {
-            loadBanks();
-        }
-    }, [selectedCurrency]);
-    
-    // Verify account when identifier reaches 10 characters
-    React.useEffect(() => {
-        if (accountIdentifier.length >= 10 && selectedBank) {
-            verifyAccountDetails();
-        }
-    }, [accountIdentifier, selectedBank]);
-    
-    // Calculate payout when amount changes
-    React.useEffect(() => {
-        if (tradeAmount && selectedToken && selectedCurrency) {
-            calculatePayout();
-        }
-    }, [tradeAmount, selectedToken, selectedCurrency]);
-    
-    const loadCurrencies = async () => {
-        try {
-            const data = await getCurrencies();
-            setCurrencies(data);
-        } catch (err) {
-            console.error('Failed to load currencies:', err);
-        }
-    };
-    
-    const loadTokenBalance = async () => {
-        try {
-            const balance = await getBalance(CONSTANTS.STABLECOIN_CONTRACTS[selectedToken]);
-            setTokenBalance(balance);
-        } catch (err) {
-            console.error('Failed to load token balance:', err);
-            setTokenBalance('0');
-        }
-    };
-    
-    const loadBanks = async () => {
-        try {
-            const data = await getInstitutions(selectedCurrency);
-            setBanks(data);
-        } catch (err) {
-            console.error('Failed to load banks:', err);
-            setBanks([]);
-        }
-    };
-    
-    const verifyAccountDetails = async () => {
-        try {
-            const name = await verifyAccount(selectedBank, accountIdentifier);
-            setAccountName(name);
-        } catch (err) {
-            console.error('Failed to verify account:', err);
-            setAccountName('');
-        }
-    };
-    
-    const calculatePayout = async () => {
-        if (!tradeAmount) return;
-        
-        try {
-            let cryptoAmount = tradeAmount;
-            if (isFiatMode) {
-                // Convert fiat to crypto using current rate
-                const rate = await getRate(selectedToken, 1, selectedCurrency);
-                cryptoAmount = (parseFloat(tradeAmount) / parseFloat(rate)).toString();
-            }
-            
-            // Create swap to get min receive amount
-            const swap = await createSwap({
-                source_token: selectedToken,
-                destination_token: selectedToken,
-                amount: cryptoAmount
-            });
-            
-            setSwapData(swap);
-            
-            // Get rate for the min receive amount
-            const payoutRate = await getRate(selectedToken, swap.quote.min_receive_amount, selectedCurrency);
-            const payout = parseFloat(swap.quote.min_receive_amount) * parseFloat(payoutRate);
-            setEstimatedPayout(payout.toString());
-        } catch (err) {
-            console.error('Failed to calculate payout:', err);
-            setEstimatedPayout('');
-        }
-    };
-    
-    const handleTrade = async () => {
-        if (!wallet || !swapData || !estimatedPayout) return;
-        
-        setLoading(true);
-        try {
-            // Get swap details with call_data
-            const swapDetails = await getSwapDetails(swapData.id);
-            
-            // Prepare calls for Starknet execute
-            const callData = swapDetails.deposit_actions[0].call_data;
-            const calls = [{
-                contractAddress: utils.decimalToHex(callData.contract_address, 64),
-                entrypoint: callData.entrypoint,
-                calldata: callData.calldata.map(item => utils.decimalToHex(item, 0))
-            }];
-            
-            // Execute transaction on Starknet
-            const result = await executeTransaction(calls);
-            
-            console.log('Starknet transaction executed:', result);
-            
-            // Call server to complete the Base trade
-            const response = await axios.post(`${CONSTANTS.API_BASE_URL}/api/complete-base-trade`, {
-                swapId: swapData.id,
-                token: selectedToken,
-                currency: selectedCurrency,
-                bankCode: selectedBank,
-                accountIdentifier: accountIdentifier,
-                accountName: accountName
-            });
-            
-            console.log('Base trade completed:', response.data);
-            
-            alert('Trade completed successfully! Tx Hash: ' + response.data.txHash);
-        } catch (err) {
-            console.error('Trade failed:', err);
-            alert('Trade failed: ' + (err.response?.data?.error || err.message));
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    return (
-        <div className="min-h-screen p-4">
-            <div className="max-w-4xl mx-auto">
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-white mb-2 neon-text" style={{fontFamily: 'Orbitron'}}>
-                        STARKNET OFF-RAMP
-                    </h1>
-                    <p className="text-gray-400 text-lg">
-                        Bridge your stablecoins from Starknet to fiat currencies
-                    </p>
+          {wallet.isConnected && (
+            <>
+              {/* Token Selection */}
+              <Select
+                label="Select Token"
+                value={formData.token}
+                onChange={(value) => updateFormData({ token: value })}
+                options={CONFIG.TOKENS.map((t) => ({
+                  value: t.symbol,
+                  label: `${t.symbol} - ${t.name}`,
+                }))}
+              />
+
+              {/* Token Balance Display */}
+              {wallet.address && formData.token && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Your Balance
+                  </label>
+                  <div className="bg-gradient-to-r from-cyan-500/20 to-purple-600/20 border border-cyan-500 rounded-lg p-4 backdrop-blur-lg">
+                    <div className="flex items-center justify-center">
+                      <TokenBalance
+                        address={wallet.address}
+                        tokenTicker={formData.token}
+                        className="text-2xl font-bold text-green-400"
+                      />
+                    </div>
+                  </div>
                 </div>
-                
-                {/* Main Card */}
-                <div className="bg-gray-900 rounded-2xl p-8 shadow-2xl border border-gray-700">
-                    
-                    {address && (
-                        <>
-                            {/* Stablecoin Selection */}
-                            <StablecoinSelector
-                                selectedToken={selectedToken}
-                                onSelect={setSelectedToken}
-                                balance={tokenBalance}
-                            />
-                            
-                            {/* Currency Selection */}
-                            <CurrencySelector
-                                selectedCurrency={selectedCurrency}
-                                onSelect={setSelectedCurrency}
-                                currencies={currencies}
-                            />
-                            
-                            {/* Bank Selection */}
-                            <BankSelector
-                                selectedBank={selectedBank}
-                                onSelect={setSelectedBank}
-                                banks={banks}
-                            />
-                            
-                            {/* Account Input */}
-                            <AccountInput
-                                value={accountIdentifier}
-                                onChange={setAccountIdentifier}
-                                accountName={accountName}
-                                loading={loading}
-                            />
-                            
-                            {/* Trade Amount */}
-                            <TradeForm
-                                amount={tradeAmount}
-                                onAmountChange={setTradeAmount}
-                                isFiatMode={isFiatMode}
-                                onToggleMode={() => setIsFiatMode(!isFiatMode)}
-                                selectedToken={selectedToken}
-                                selectedCurrency={selectedCurrency}
-                            />
-                            
-                            {/* Payout Display */}
-                            <PayoutDisplay
-                                amount={estimatedPayout}
-                                currency={selectedCurrency}
-                                loading={loading}
-                            />
-                            
-                            {/* Trade Button */}
-                            <TradeButton
-                                onClick={handleTrade}
-                                loading={loading}
-                                disabled={!address || !selectedCurrency || !selectedBank || !accountIdentifier || !tradeAmount || !accountName}
-                            />
-                        </>
-                    )}
+              )}
+
+              {/* Currency Selection */}
+              <Select
+                label="Select Fiat Currency"
+                value={formData.currency}
+                onChange={(value) => updateFormData({ currency: value })}
+                options={appState.currencies.map((c) => ({
+                  value: c.code,
+                  label: `${c.name} (${c.symbol})`,
+                }))}
+                placeholder="Choose currency..."
+              />
+
+              {/* Bank Selection */}
+              <Select
+                label="Select Bank Institution"
+                value={formData.bank}
+                onChange={(value) => updateFormData({ bank: value })}
+                options={appState.institutions.map((i) => ({
+                  value: i.code,
+                  label: i.name,
+                }))}
+                disabled={!formData.currency}
+                placeholder="Choose bank..."
+              />
+
+              {/* Account Number */}
+              <Input
+                label="Account Number/Identifier"
+                value={formData.accountNumber}
+                onChange={(value) => updateFormData({ accountNumber: value })}
+                placeholder="Enter account number..."
+                helperText={
+                  formData.accountName
+                    ? `✓ Account Name: ${formData.accountName}`
+                    : undefined
+                }
+              />
+
+              {/* Trade Amount */}
+              <Input
+                label="Trade Amount"
+                type="number"
+                value={formData.amount}
+                onChange={(value) => updateFormData({ amount: value })}
+                placeholder={`Enter amount in ${
+                  formData.isFiatInput ? formData.currency : formData.token
+                }...`}
+              />
+
+              {/* Payout Display */}
+              <PayoutDisplay
+                amount={appState.estimatedPayout}
+                currency={formData.currency}
+                loading={operation.loading}
+              />
+
+              {/* Trade Button */}
+              <Button
+                onClick={handleTrade}
+                loading={operation.loading}
+                disabled={!isFormValid}
+                className="w-full text-xl py-4"
+              >
+                Initiate Trade
+              </Button>
+
+              {/* Error Display */}
+              {operation.error && (
+                <div className={`mt-4 p-4 rounded-lg ${isDarkMode ? 'bg-red-500/10 border-red-500' : 'bg-red-50 border-red-300'}`}>
+                  <p className={`text-sm ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{operation.error}</p>
                 </div>
-                
-                {/* Footer */}
-                <div className="text-center mt-8 text-gray-500">
-                    <p>Powered by LayerSwap & Paycrest APIs</p>
-                </div>
-            </div>
+              )}
+            </>
+          )}
+        </Card>
+
+        {/* Footer */}
+        <div className={`text-center mt-8 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+          <p>Powered by LayerSwap & Paycrest APIs</p>
         </div>
-    );
-};
-
+      </div>
+    </div>
+  );
+}

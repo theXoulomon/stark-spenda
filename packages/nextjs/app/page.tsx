@@ -1,11 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ConnectedAddress } from "~~/components/ConnectedAddress";
+import StarknetOffRamp from "~~/components/Form";
 
 const Home = () => {
   return (
-    <div className="flex items-center flex-col grow pt-10">
-      <div className="px-5">
+    <div className="flex items-center flex-col grow pt-5">
+      {/* <div className="px-5">
         <h1 className="text-center">
           <span className="block text-2xl mb-2">Welcome to</span>
           <span className="block text-4xl font-bold">Scaffold-Stark 2</span>
@@ -55,6 +56,11 @@ const Home = () => {
             </p>
           </div>
         </div>
+      </div> */}
+
+      {/* Starknet Off-Ramp Form */}
+      <div className="w-full ">
+        <StarknetOffRamp />
       </div>
     </div>
   );

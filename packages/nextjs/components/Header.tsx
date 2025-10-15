@@ -116,7 +116,7 @@ export const Header = () => {
   ]);
 
   return (
-    <div className=" lg:static top-0 navbar min-h-0 shrink-0 justify-between z-20 px-0 sm:px-2">
+    <div className=" lg:static top-0 navbar min-h-0 shrink-0 justify-between z-20 px-0 sm:px-2 py-2">
       <div className="navbar-start w-auto lg:w-1/2 -mr-2">
         <div className="lg:hidden dropdown" ref={burgerMenuRef}>
           <label
@@ -149,7 +149,7 @@ export const Header = () => {
           passHref
           className="hidden lg:flex items-center gap-2 ml-4 mr-6 shrink-0"
         >
-          <div className="flex relative w-10 h-10">
+          <div className="flex relative w-8 h-8">
             <Image
               alt="SE2 logo"
               className="cursor-pointer"
@@ -158,7 +158,7 @@ export const Header = () => {
             />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold leading-tight">Scaffold-Stark</span>
+            <span className="font-bold leading-tight text-sm">Scaffold-Stark</span>
             <span className="text-xs">Starknet dev stack</span>
           </div>
         </Link>
