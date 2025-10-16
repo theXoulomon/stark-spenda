@@ -30,7 +30,19 @@ interface SwapQuote {
   id: string;
   quote: {
     min_receive_amount: string;
+    receive_amount: string;
+    blockchain_fee: number;
+    service_fee: number;
+    total_fee: number;
+    total_fee_in_usd: number;
   };
+  deposit_actions: Array<{
+    type: string;
+    to_address: string;
+    amount: number;
+    amount_in_base_units: string;
+    call_data: string;
+  }>;
 }
 
 interface WalletState {
@@ -47,6 +59,7 @@ interface TradeFormData {
   accountNumber: string;
   accountName: string;
   isFiatInput: boolean;
+  showAccountName: boolean;
 }
 
 // ==================== CONFIGURATION ====================
@@ -163,21 +176,15 @@ const layerSwapService = {
     amount: string;
   }): Promise<SwapQuote> => {
     const response = await axios.post(
-      `${CONFIG.API.LAYERSWAP}/swaps`,
+      `/api/proxy?endpoint=/swaps`,
       {
         source_network: CONFIG.NETWORKS.SOURCE,
         source_token: params.sourceToken,
         destination_token: params.destinationToken,
         destination_network: CONFIG.NETWORKS.DESTINATION,
         refuel: true,
-        amount: params.amount,
+        amount: Number(params.amount),
         destination_address: CONFIG.BASE_ADDRESS,
-      },
-      {
-        headers: {
-          'X-LS-APIKEY': CONFIG.KEYS.LAYERSWAP,
-          'Content-Type': 'application/json',
-        },
       }
     );
     return response.data.data;
@@ -185,12 +192,7 @@ const layerSwapService = {
 
   getSwapDetails: async (swapId: string): Promise<any> => {
     const response = await axios.get(
-      `${CONFIG.API.LAYERSWAP}/swaps/${swapId}`,
-      {
-        headers: {
-          'X-LS-APIKEY': CONFIG.KEYS.LAYERSWAP,
-        },
-      }
+      `/api/proxy?endpoint=/swaps/${swapId}`
     );
     return response.data.data;
   },
@@ -198,18 +200,13 @@ const layerSwapService = {
 
 const paycrestService = {
   getCurrencies: async (): Promise<Currency[]> => {
-    const response = await axios.get(`${CONFIG.API.PAYCREST}/currencies`, {
-      headers: { 'API-Key': CONFIG.KEYS.PAYCREST },
-    });
+    const response = await axios.get(`/api/proxy?endpoint=/currencies`);
     return response.data.data;
   },
 
   getInstitutions: async (currency: string): Promise<Institution[]> => {
     const response = await axios.get(
-      `${CONFIG.API.PAYCREST}/institutions/${currency}`,
-      {
-        headers: { 'API-Key': CONFIG.KEYS.PAYCREST },
-      }
+      `/api/proxy?endpoint=/institutions/${currency}`
     );
     return response.data.data;
   },
@@ -219,14 +216,8 @@ const paycrestService = {
     accountIdentifier: string
   ): Promise<string> => {
     const response = await axios.post(
-      `${CONFIG.API.PAYCREST}/verify-account`,
-      { institution, accountIdentifier },
-      {
-        headers: {
-          'API-Key': CONFIG.KEYS.PAYCREST,
-          'Content-Type': 'application/json',
-        },
-      }
+      `/api/proxy?endpoint=/verify-account`,
+      { institution, accountIdentifier }
     );
     return response.data.data;
   },
@@ -238,10 +229,7 @@ const paycrestService = {
     network = 'base'
   ): Promise<number> => {
     const response = await axios.get(
-      `${CONFIG.API.PAYCREST}/rates/${token}/${amount}/${currency}?network=${network}`,
-      {
-        headers: { 'API-Key': CONFIG.KEYS.PAYCREST },
-      }
+      `/api/proxy?endpoint=/rates/${token}/${amount}/${currency}?network=${network}`
     );
     return response.data.data;
   },
@@ -441,10 +429,30 @@ const Select = ({
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         className={`${isDarkMode ? 'bg-cyan-500/10 border-cyan-500 text-white focus:shadow-cyan-500/50' : 'bg-blue-50 border-blue-300 text-gray-900 focus:shadow-blue-500/50'} border-2 px-4 py-3 rounded-lg w-full focus:outline-none focus:shadow-lg transition-all disabled:opacity-50`}
+        style={{ 
+          WebkitAppearance: 'none',
+          MozAppearance: 'none',
+          appearance: 'none',
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='${isDarkMode ? '%23ffffff' : '%23000000'}'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right 1rem center',
+          backgroundSize: '1.5em 1.5em',
+          paddingRight: '2.5rem'
+        }}
       >
-        <option value="">{placeholder}</option>
+        <option value="" className={`${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-900'}`}>
+          {placeholder}
+        </option>
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option 
+            key={option.value} 
+            value={option.value}
+            className={`${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-900'}`}
+            style={{
+              padding: '0.5rem',
+              cursor: 'pointer'
+            }}
+          >
             {option.label}
           </option>
         ))}
@@ -465,7 +473,7 @@ const Card = ({
 
   return (
     <div
-      className={`${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl p-8 shadow-2xl border ${className}`}
+      className={`${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl p-8 shadow-2xl border backdrop-blur-lg ${className}`}
     >
       {children}
     </div>
@@ -507,21 +515,24 @@ const PayoutDisplay = ({
   currency: string;
   loading: boolean;
 }) => {
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
+
   return (
     <div className="mb-6">
-      <div className="bg-gradient-to-r from-cyan-500/20 to-purple-600/20 border border-cyan-500 rounded-lg p-6 backdrop-blur-lg">
+      <div className={`${isDarkMode ? 'bg-gradient-to-r from-cyan-500/20 to-purple-600/20 border-cyan-500' : 'bg-gradient-to-r from-blue-50 to-indigo-100 border-blue-300'} border rounded-lg p-6 backdrop-blur-lg`}>
         <div className="text-center">
-          <p className="text-sm text-gray-300 mb-2">Estimated Payout</p>
+          <p className={`text-sm mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Estimated Payout Amount</p>
           {loading ? (
-            <p className="text-2xl font-bold text-blue-400 animate-pulse">
+            <p className={`text-2xl font-bold animate-pulse ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
               Calculating...
             </p>
           ) : amount ? (
-            <p className="text-3xl font-bold text-green-400">
+            <p className={`text-3xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
               {formatters.amount(amount, 2)} {currency}
             </p>
           ) : (
-            <p className="text-xl text-gray-500">Enter amount to see payout</p>
+            <p className={`text-xl ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Enter amount to see payout</p>
           )}
         </div>
       </div>
@@ -544,6 +555,7 @@ export default function StarknetOffRamp() {
     accountNumber: '',
     accountName: '',
     isFiatInput: false,
+    showAccountName: false,
   });
 
   const [appState, setAppState] = useState({
@@ -551,6 +563,7 @@ export default function StarknetOffRamp() {
     institutions: [] as Institution[],
     estimatedPayout: '',
     swapQuote: null as SwapQuote | null,
+    selectedTokenBalance: '',
   });
 
   // Load initial data
@@ -579,6 +592,13 @@ export default function StarknetOffRamp() {
     }
   }, [formData.amount, formData.token, formData.currency]);
 
+  // Update token balance when token changes
+  useEffect(() => {
+    if (wallet.address && formData.token) {
+      updateTokenBalance();
+    }
+  }, [formData.token, wallet.address]);
+
   const updateFormData = (updates: Partial<TradeFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
   };
@@ -590,6 +610,11 @@ export default function StarknetOffRamp() {
     if (currencies) {
       setAppState((prev) => ({ ...prev, currencies }));
     }
+  };
+
+  const updateTokenBalance = async () => {
+    // This will be handled by the TokenBalance component
+    // We can add logic here if needed to fetch balance programmatically
   };
 
   const loadInstitutions = async () => {
@@ -606,50 +631,60 @@ export default function StarknetOffRamp() {
       paycrestService.verifyAccount(formData.bank, formData.accountNumber)
     );
     if (accountName) {
-      updateFormData({ accountName });
+      updateFormData({ accountName, showAccountName: true });
     }
   };
 
   const calculatePayout = async () => {
-    let cryptoAmount = formData.amount;
+    try {
+      let cryptoAmount = formData.amount;
 
-    if (formData.isFiatInput) {
-      const rate = await operation.execute(() =>
-        paycrestService.getRate(formData.token, '1', formData.currency)
-      );
-      if (rate) {
-        cryptoAmount = (parseFloat(formData.amount) / rate).toString();
-      } else {
-        return;
+      if (formData.isFiatInput) {
+        const rate = await operation.execute(() =>
+          paycrestService.getRate(formData.token, '1', formData.currency)
+        );
+        if (rate) {
+          cryptoAmount = (parseFloat(formData.amount) / parseFloat(rate.toString())).toString();
+        } else {
+          return;
+        }
       }
-    }
 
-    const swap = await operation.execute(() =>
-      layerSwapService.createSwap({
-        sourceToken: formData.token,
-        destinationToken: formData.token,
-        amount: cryptoAmount,
-      })
-    );
-
-    if (swap) {
-      const payoutRate = await operation.execute(() =>
-        paycrestService.getRate(
-          formData.token,
-          swap.quote.min_receive_amount,
-          formData.currency
-        )
+      const swap = await operation.execute(() =>
+        layerSwapService.createSwap({
+          sourceToken: formData.token,
+          destinationToken: formData.token,
+          amount: cryptoAmount,
+        })
       );
 
-      if (payoutRate) {
-        const payout =
-          parseFloat(swap.quote.min_receive_amount) * payoutRate;
-        setAppState((prev) => ({
-          ...prev,
-          swapQuote: swap,
-          estimatedPayout: payout.toString(),
-        }));
+      if (swap) {
+        // Use min_receive_amount as specified in requirements
+        const minReceiveAmount = swap.quote.min_receive_amount;
+
+        // Get conversion rate for the min receive amount
+        const payoutRate = await operation.execute(() =>
+          paycrestService.getRate(
+            formData.token,
+            minReceiveAmount,
+            formData.currency
+          )
+        );
+
+        if (payoutRate) {
+          // Calculate final payout amount: rate * min_receive_amount
+          const payout = parseFloat(payoutRate.toString()) * parseFloat(minReceiveAmount);
+
+          setAppState((prev) => ({
+            ...prev,
+            swapQuote: swap,
+            estimatedPayout: payout.toFixed(2),
+          }));
+        }
       }
+    } catch (error) {
+      console.error('Error calculating payout:', error);
+      operation.execute(() => Promise.reject(error));
     }
   };
 
@@ -662,11 +697,13 @@ export default function StarknetOffRamp() {
     if (!wallet.instance || !appState.swapQuote) return;
 
     const result = await operation.execute(async () => {
+      // Get swap details to get call data
       const swapDetails = await layerSwapService.getSwapDetails(
         appState.swapQuote!.id
       );
       const callData = swapDetails.deposit_actions[0].call_data;
 
+      // Convert call data to hex format
       const calls = [
         {
           contractAddress: formatters.decimalToHex(
@@ -680,22 +717,43 @@ export default function StarknetOffRamp() {
         },
       ];
 
-      await wallet.executeTransaction(calls);
+      console.log('Executing Starknet transaction with calls:', calls);
 
-      const baseResult = await baseService.completeTrade({
-        swapId: appState.swapQuote!.id,
+      // Sign and execute transaction on Starknet
+      const txResult = await wallet.executeTransaction(calls);
+      console.log('Starknet transaction result:', txResult);
+
+      // Create Paycrest order
+      const orderData = {
+        amount: parseFloat(appState.swapQuote!.quote.min_receive_amount),
         token: formData.token,
-        currency: formData.currency,
-        bankCode: formData.bank,
-        accountIdentifier: formData.accountNumber,
-        accountName: formData.accountName,
-      });
+        rate: parseFloat(appState.estimatedPayout) / parseFloat(appState.swapQuote!.quote.min_receive_amount),
+        network: 'base',
+        recipient: {
+          institution: formData.bank,
+          accountIdentifier: formData.accountNumber,
+          accountName: formData.accountName,
+          currency: formData.currency,
+        },
+        returnAddress: CONFIG.BASE_ADDRESS,
+      };
 
-      return baseResult;
+      console.log('Creating Paycrest order with data:', orderData);
+      const paycrestOrder = await paycrestService.createOrder(orderData);
+      console.log('Paycrest order created:', paycrestOrder);
+
+      // The base transfer will be handled by the backend with private key
+      // For now, we'll just return the order info
+      return {
+        success: true,
+        orderId: paycrestOrder.id,
+        receiveAddress: paycrestOrder.receiveAddress,
+        message: 'Off-ramp trade initiated successfully. Funds will be transferred to your bank account.'
+      };
     });
 
     if (result) {
-      alert(`Trade completed successfully! Tx Hash: ${result.txHash}`);
+      alert(`Off-ramp trade initiated successfully! Order ID: ${result.orderId}\n${result.message}`);
     }
   };
 
@@ -708,7 +766,7 @@ export default function StarknetOffRamp() {
     formData.accountName;
 
   return (
-    <div className={`min-h-screen p-4 ${isDarkMode ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-blue-50 to-indigo-100'}`}>
+    <div className={`min-h-screen p-4 ${isDarkMode ? 'bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-800' : 'bg-gradient-to-br from-blue-50 via-cyan-50/30 to-indigo-100'}`}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -719,30 +777,21 @@ export default function StarknetOffRamp() {
             STARKNET OFF-RAMP
           </h1>
           <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Bridge your stablecoins from Starknet to fiat currencies
+            Seamlessly convert your Starknet stablecoins to fiat currencies
           </p>
         </div>
 
         <Card>
           {/* Wallet Connection */}
-          {/* <div className="mb-6">
-            {!wallet.isConnected ? (
-              <Button
-                onClick={handleWalletConnect}
-                loading={operation.loading}
-                className="w-full text-lg"
-              >
-                Connect Starknet Wallet
-              </Button>
-            ) : (
-              <div className={`flex items-center justify-between rounded-lg p-4 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                <StatusBadge status="connected" text="Connected" />
-                <span className={`font-mono ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {formatters.address(wallet.address || '')}
-                </span>
+          <div className="mb-6">
+            {!wallet.isConnected && (
+              <div className="flex items-center justify-center mb-4 w-full">
+                <label className={`text-lg font-semibold bg-gradient-to-r from-cyan-500 to-purple-600 bg-clip-text text-transparent transform transition-all text-center ${isDarkMode ? 'hover:text-gray-300' : 'hover:text-gray-700'}`}>
+                  Your Gateway to Liquidating Starknet Asset to Fiat
+                </label>
               </div>
             )}
-          </div> */}
+          </div>
 
           {wallet.isConnected && (
             <>
@@ -759,16 +808,30 @@ export default function StarknetOffRamp() {
 
               {/* Token Balance Display */}
               {wallet.address && formData.token && (
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Your Balance
-                  </label>
-                  <div className="bg-gradient-to-r from-cyan-500/20 to-purple-600/20 border border-cyan-500 rounded-lg p-4 backdrop-blur-lg">
-                    <div className="flex items-center justify-center">
+                <div className="mb-4">
+                  <div className={`${isDarkMode ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg py-2 px-4 border ${isDarkMode ? 'border-cyan-500/20' : 'border-cyan-200'} flex items-center`}>
+                    <div className="flex items-center space-x-3">
+                      <img 
+                        src={(() => {
+                          const logoUrls = {
+                            'USDC': 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png',
+                            'USDT': 'https://cryptologos.cc/logos/tether-usdt-logo.png',
+                            'DAI': 'https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.png',
+                            'ETH': 'https://cryptologos.cc/logos/ethereum-eth-logo.png'
+                          };
+                          return logoUrls[formData.token as keyof typeof logoUrls] || '';
+                        })()}
+                        alt={formData.token}
+                        className="w-6 h-6 rounded-full"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
                       <TokenBalance
                         address={wallet.address}
                         tokenTicker={formData.token}
-                        className="text-2xl font-bold text-green-400"
+                        className={`text-lg font-semibold ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`}
                       />
                     </div>
                   </div>
@@ -777,45 +840,93 @@ export default function StarknetOffRamp() {
 
               {/* Currency Selection */}
               <Select
-                label="Select Fiat Currency"
+                label="Select Beneficiary Currency"
                 value={formData.currency}
                 onChange={(value) => updateFormData({ currency: value })}
                 options={appState.currencies.map((c) => ({
                   value: c.code,
                   label: `${c.name} (${c.symbol})`,
                 }))}
-                placeholder="Choose currency..."
+                placeholder={operation.loading ? "Loading currencies..." : "Choose beneficiary currency..."}
+                disabled={operation.loading}
               />
 
               {/* Bank Selection */}
               <Select
-                label="Select Bank Institution"
+                label="Select Beneficiary Bank Institution"
                 value={formData.bank}
                 onChange={(value) => updateFormData({ bank: value })}
                 options={appState.institutions.map((i) => ({
                   value: i.code,
                   label: i.name,
                 }))}
-                disabled={!formData.currency}
-                placeholder="Choose bank..."
+                disabled={!formData.currency || operation.loading}
+                placeholder={operation.loading ? "Loading banks..." : "Choose beneficiary bank..."}
               />
 
               {/* Account Number */}
               <Input
-                label="Account Number/Identifier"
+                label="Beneficiary Account Identifier"
                 value={formData.accountNumber}
                 onChange={(value) => updateFormData({ accountNumber: value })}
-                placeholder="Enter account number..."
+                placeholder="Enter beneficiary account identifier..."
                 helperText={
-                  formData.accountName
+                  formData.accountName && formData.showAccountName
                     ? `✓ Account Name: ${formData.accountName}`
                     : undefined
                 }
               />
 
+              {/* Show/Hide Account Name Toggle */}
+              {formData.accountName && (
+                <div className="mb-6">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="showAccountName"
+                      checked={formData.showAccountName}
+                      onChange={(e) => updateFormData({ showAccountName: e.target.checked })}
+                      className="w-4 h-4 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500 focus:ring-2"
+                    />
+                    <label htmlFor="showAccountName" className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Show account name
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Fiat/Crypto Toggle */}
+              <div className="mb-6">
+                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Asset Value Type
+                </label>
+                <div className="flex space-x-4">
+                  <button
+                    onClick={() => updateFormData({ isFiatInput: false })}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      !formData.isFiatInput
+                        ? 'bg-gradient-to-r from-cyan-500 to-purple-600 text-white'
+                        : `${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
+                    }`}
+                  >
+                    Crypto ({formData.token})
+                  </button>
+                  <button
+                    onClick={() => updateFormData({ isFiatInput: true })}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      formData.isFiatInput
+                        ? 'bg-gradient-to-r from-cyan-500 to-purple-600 text-white'
+                        : `${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
+                    }`}
+                  >
+                    Fiat ({formData.currency || 'Select currency'})
+                  </button>
+                </div>
+              </div>
+
               {/* Trade Amount */}
               <Input
-                label="Trade Amount"
+                label="Amount to Trade"
                 type="number"
                 value={formData.amount}
                 onChange={(value) => updateFormData({ amount: value })}
@@ -838,13 +949,20 @@ export default function StarknetOffRamp() {
                 disabled={!isFormValid}
                 className="w-full text-xl py-4"
               >
-                Initiate Trade
+                Initiate Off-Ramp Trade
               </Button>
 
               {/* Error Display */}
               {operation.error && (
-                <div className={`mt-4 p-4 rounded-lg ${isDarkMode ? 'bg-red-500/10 border-red-500' : 'bg-red-50 border-red-300'}`}>
-                  <p className={`text-sm ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{operation.error}</p>
+                <div className={`mt-4 p-4 rounded-lg border ${isDarkMode ? 'bg-red-500/10 border-red-500' : 'bg-red-50 border-red-300'}`}>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-5 h-5 text-red-500">
+                      <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <p className={`text-sm font-medium ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{operation.error}</p>
+                  </div>
                 </div>
               )}
             </>
@@ -853,7 +971,8 @@ export default function StarknetOffRamp() {
 
         {/* Footer */}
         <div className={`text-center mt-8 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-          <p>Powered by LayerSwap & Paycrest APIs</p>
+          <p className="text-sm">Powered by LayerSwap & Paycrest APIs</p>
+          <p className="text-xs mt-1 opacity-75">Secure cross-chain off-ramping solution</p>
         </div>
       </div>
     </div>

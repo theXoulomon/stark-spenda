@@ -1,0 +1,1261 @@
+1c595ee0-d133-4b4f-b6fe-04831228ac2a
+
+CpMEBftNnUd5ePc6GCchpN9CqB9CMuwN8ayWlAOPp1Up8OY3h+hh2uhzreva2/rnniL+umG0N4M7v/0ASiIVNw
+
+***Layerswap api
+**bridge asset
+
+
+const options = {
+method: 'POST',
+headers: {
+accept: 'application/json',
+'content-type': 'application/json',
+'X-LS-APIKEY': 'CpMEBftNnUd5ePc6GCchpN
+},
+body: JSON.stringify({
+source_network: 'STARKNET_MAINNET',
+source_token: 'USDC',
+destination_token: 'USDC',
+destination_network: 'BASE_MAINNET',
+refuel: true,
+amount: 5,
+destination_address: '0xb39b7c02372dBBb003c05D6b4ABA2eC68842934D'
+})
+};
+
+fetch('https://api.layerswap.io/api/v2/swaps', options)
+.then(res => res.json())
+.then(res => console.log(res))
+.catch(err => console.error(err));
+
+
+
+
+response
+
+{
+"data": {
+"deposit_actions": [
+{
+"type": "transfer",
+"to_address": "0x019252b1deef483477c4d30cfcc3e5ed9c82fafea44669c182a45a01b4fdb97a",
+"amount": 5,
+"order": 0,
+"amount_in_base_units": "5000000",
+"network": {
+"name": "STARKNET_MAINNET",
+"display_name": "Starknet",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/starknet_mainnet.png",
+"chain_id": "0x534e5f4d41494e",
+"node_url": "https://starknet-mainnet.public.blastapi.io/rpc/v0_8",
+"type": "starknet",
+"transaction_explorer_template": "https://voyager.online/tx/{0}",
+"account_explorer_template": "https://voyager.online/contract/{0}",
+"source_rank": 7,
+"destination_rank": 4,
+"token": {
+"symbol": "STRK",
+"display_asset": "STRK",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/strk.png",
+"contract": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+"decimals": 18,
+"price_in_usd": 0.131993,
+"precision": 8,
+"listing_date": "2024-07-10T14:51:41.783071+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"metadata": {
+"listing_date": "2022-05-28T20:00:00+00:00",
+"watchdog_contract": "0x022993789c33e54e0d296fc266a9c9a2e9dcabe2e48941f5fa1bd5692ac4a8c4"
+},
+"deposit_methods": [
+"wallet"
+]
+},
+"token": {
+"symbol": "USDC",
+"display_asset": "USDC",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/usdc.png",
+"contract": "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
+"decimals": 6,
+"price_in_usd": 0.999802,
+"precision": 6,
+"listing_date": "2023-03-13T13:26:21.210657+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"fee_token": {
+"symbol": "STRK",
+"display_asset": "STRK",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/strk.png",
+"contract": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+"decimals": 18,
+"price_in_usd": 0.131993,
+"precision": 8,
+"listing_date": "2024-07-10T14:51:41.783071+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"call_data": "[{\"contractAddress\":\"0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8\",\"entrypoint\":\"transfer\",\"calldata\":[\"710843258629671088991136840342586245070522210378167334926343399070771296634\",\"5000000\",\"0\"]},{\"contractAddress\":\"0x022993789c33e54e0d296fc266a9c9a2e9dcabe2e48941f5fa1bd5692ac4a8c4\",\"entrypoint\":\"watch\",\"calldata\":[\"7405681\"]}]"
+}
+],
+"swap": {
+"id": "d7524a08-b894-4926-8972-5d6e6e222a39",
+"created_date": "2025-09-17T12:06:44.369351+00:00",
+"source_network": {
+"name": "STARKNET_MAINNET",
+"display_name": "Starknet",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/starknet_mainnet.png",
+"chain_id": "0x534e5f4d41494e",
+"node_url": "https://starknet-mainnet.public.blastapi.io/rpc/v0_8",
+"type": "starknet",
+"transaction_explorer_template": "https://voyager.online/tx/{0}",
+"account_explorer_template": "https://voyager.online/contract/{0}",
+"source_rank": 7,
+"destination_rank": 4,
+"token": {
+"symbol": "STRK",
+"display_asset": "STRK",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/strk.png",
+"contract": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+"decimals": 18,
+"price_in_usd": 0.131993,
+"precision": 8,
+"listing_date": "2024-07-10T14:51:41.783071+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"metadata": {
+"listing_date": "2022-05-28T20:00:00+00:00",
+"watchdog_contract": "0x022993789c33e54e0d296fc266a9c9a2e9dcabe2e48941f5fa1bd5692ac4a8c4"
+},
+"deposit_methods": [
+"wallet"
+]
+},
+"source_token": {
+"symbol": "USDC",
+"display_asset": "USDC",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/usdc.png",
+"contract": "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
+"decimals": 6,
+"price_in_usd": 0.999802,
+"precision": 6,
+"listing_date": "2023-03-13T13:26:21.210657+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"destination_network": {
+"name": "BASE_MAINNET",
+"display_name": "Base",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/base_mainnet.png",
+"chain_id": "8453",
+"node_url": "https://lb.nodies.app/v1/cd20f05d16d24649b06f0e834a4d91c4",
+"type": "evm",
+"transaction_explorer_template": "https://basescan.org/tx/{0}",
+"account_explorer_template": "https://basescan.org/address/{0}",
+"source_rank": 2,
+"destination_rank": 1,
+"token": {
+"symbol": "ETH",
+"display_asset": "ETH",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/eth.png",
+"contract": null,
+"decimals": 18,
+"price_in_usd": 4493.53,
+"precision": 8,
+"listing_date": "2023-08-02T10:56:49.590891+00:00",
+"source_rank": 1,
+"destination_rank": 1
+},
+"metadata": {
+"listing_date": "2023-08-01T20:00:00+00:00",
+"evm_oracle_contract": "0x420000000000000000000000000000000000000F",
+"evm_multicall_contract": "0xca11bde05977b3631167028862be2a173976ca11"
+}
+},
+"destination_token": {
+"symbol": "USDC",
+"display_asset": "USDC",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/usdc.png",
+"contract": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+"decimals": 6,
+"price_in_usd": 0.999802,
+"precision": 6,
+"listing_date": "2023-09-14T16:21:22.07463+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"requested_amount": 5,
+"destination_address": "0xb39b7c02372dbbb003c05d6b4aba2ec68842934d",
+"status": "user_transfer_pending",
+"fail_reason": null,
+"use_deposit_address": false,
+"metadata": {
+"sequence_number": 7405681
+},
+"transactions": []
+},
+"quote": {
+"source_network": {
+"name": "STARKNET_MAINNET",
+"display_name": "Starknet",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/starknet_mainnet.png",
+"chain_id": "0x534e5f4d41494e",
+"node_url": "https://starknet-mainnet.public.blastapi.io/rpc/v0_8",
+"type": "starknet",
+"transaction_explorer_template": "https://voyager.online/tx/{0}",
+"account_explorer_template": "https://voyager.online/contract/{0}",
+"source_rank": 7,
+"destination_rank": 4,
+"token": {
+"symbol": "STRK",
+"display_asset": "STRK",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/strk.png",
+"contract": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+"decimals": 18,
+"price_in_usd": 0.131993,
+"precision": 8,
+"listing_date": "2024-07-10T14:51:41.783071+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"metadata": {
+"listing_date": "2022-05-28T20:00:00+00:00",
+"watchdog_contract": "0x022993789c33e54e0d296fc266a9c9a2e9dcabe2e48941f5fa1bd5692ac4a8c4"
+},
+"deposit_methods": [
+"wallet"
+]
+},
+"source_token": {
+"symbol": "USDC",
+"display_asset": "USDC",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/usdc.png",
+"contract": "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
+"decimals": 6,
+"price_in_usd": 0.999802,
+"precision": 6,
+"listing_date": "2023-03-13T13:26:21.210657+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"destination_network": {
+"name": "BASE_MAINNET",
+"display_name": "Base",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/base_mainnet.png",
+"chain_id": "8453",
+"node_url": "https://lb.nodies.app/v1/cd20f05d16d24649b06f0e834a4d91c4",
+"type": "evm",
+"transaction_explorer_template": "https://basescan.org/tx/{0}",
+"account_explorer_template": "https://basescan.org/address/{0}",
+"source_rank": 2,
+"destination_rank": 1,
+"token": {
+"symbol": "ETH",
+"display_asset": "ETH",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/eth.png",
+"contract": null,
+"decimals": 18,
+"price_in_usd": 4493.53,
+"precision": 8,
+"listing_date": "2023-08-02T10:56:49.590891+00:00",
+"source_rank": 1,
+"destination_rank": 1
+},
+"metadata": {
+"listing_date": "2023-08-01T20:00:00+00:00",
+"evm_oracle_contract": "0x420000000000000000000000000000000000000F",
+"evm_multicall_contract": "0xca11bde05977b3631167028862be2a173976ca11"
+}
+},
+"destination_token": {
+"symbol": "USDC",
+"display_asset": "USDC",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/usdc.png",
+"contract": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+"decimals": 6,
+"price_in_usd": 0.999802,
+"precision": 6,
+"listing_date": "2023-09-14T16:21:22.07463+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"requested_amount": 0,
+"receive_amount": 4.485828,
+"fee_discount": 0,
+"min_receive_amount": 4.373683,
+"blockchain_fee": 0.001572,
+"service_fee": 0.012501,
+"avg_completion_time": "00:00:25.6935420",
+"refuel_in_source": 0.500099,
+"slippage": 0.025,
+"total_fee": 0.014073,
+"total_fee_in_usd": 0.01407
+},
+"refuel": {
+"token": {
+"symbol": "ETH",
+"display_asset": "ETH",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/eth.png",
+"contract": null,
+"decimals": 18,
+"price_in_usd": 4493.53,
+"precision": 8,
+"listing_date": "2023-08-02T10:56:49.590891+00:00",
+"source_rank": 1,
+"destination_rank": 1
+},
+"network": {
+"name": "BASE_MAINNET",
+"display_name": "Base",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/base_mainnet.png",
+"chain_id": "8453",
+"node_url": "https://lb.nodies.app/v1/cd20f05d16d24649b06f0e834a4d91c4",
+"type": "evm",
+"transaction_explorer_template": "https://basescan.org/tx/{0}",
+"account_explorer_template": "https://basescan.org/address/{0}",
+"source_rank": 2,
+"destination_rank": 1,
+"token": {
+"symbol": "ETH",
+"display_asset": "ETH",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/eth.png",
+"contract": null,
+"decimals": 18,
+"price_in_usd": 4493.53,
+"precision": 8,
+"listing_date": "2023-08-02T10:56:49.590891+00:00",
+"source_rank": 1,
+"destination_rank": 1
+},
+"metadata": {
+"listing_date": "2023-08-01T20:00:00+00:00",
+"evm_oracle_contract": "0x420000000000000000000000000000000000000F",
+"evm_multicall_contract": "0xca11bde05977b3631167028862be2a173976ca11"
+}
+},
+"amount": 0.00011127,
+"amount_in_usd": 0.4999950831
+},
+"reward": null
+}
+}
+
+
+
+**get order details
+
+
+const options = {
+method: 'GET',
+headers: {
+accept: 'application/json',
+'X-LS-APIKEY': 'CpMEBftNnUd5ePc6GCchpN
+}
+};
+
+fetch('https://api.layerswap.io/api/v2/swaps/d7524a08-b894-4926-8972-5d6e6e222a39', options)
+.then(res => res.json())
+.then(res => console.log(res))
+.catch(err => console.error(err));
+
+
+
+
+{
+"data": {
+"deposit_actions": [
+{
+"type": "transfer",
+"to_address": "0x019252b1deef483477c4d30cfcc3e5ed9c82fafea44669c182a45a01b4fdb97a",
+"amount": 5,
+"order": 0,
+"amount_in_base_units": "5000000",
+"network": {
+"name": "STARKNET_MAINNET",
+"display_name": "Starknet",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/starknet_mainnet.png",
+"chain_id": "0x534e5f4d41494e",
+"node_url": "https://starknet-mainnet.public.blastapi.io/rpc/v0_8",
+"type": "starknet",
+"transaction_explorer_template": "https://voyager.online/tx/{0}",
+"account_explorer_template": "https://voyager.online/contract/{0}",
+"source_rank": 7,
+"destination_rank": 4,
+"token": {
+"symbol": "STRK",
+"display_asset": "STRK",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/strk.png",
+"contract": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+"decimals": 18,
+"price_in_usd": 0.131993,
+"precision": 8,
+"listing_date": "2024-07-10T14:51:41.783071+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"metadata": {
+"listing_date": "2022-05-28T20:00:00+00:00",
+"watchdog_contract": "0x022993789c33e54e0d296fc266a9c9a2e9dcabe2e48941f5fa1bd5692ac4a8c4"
+},
+"deposit_methods": [
+"wallet"
+]
+},
+"token": {
+"symbol": "USDC",
+"display_asset": "USDC",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/usdc.png",
+"contract": "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
+"decimals": 6,
+"price_in_usd": 0.999802,
+"precision": 6,
+"listing_date": "2023-03-13T13:26:21.210657+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"fee_token": {
+"symbol": "STRK",
+"display_asset": "STRK",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/strk.png",
+"contract": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+"decimals": 18,
+"price_in_usd": 0.131993,
+"precision": 8,
+"listing_date": "2024-07-10T14:51:41.783071+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"call_data": "[{\"contractAddress\":\"0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8\",\"entrypoint\":\"transfer\",\"calldata\":[\"710843258629671088991136840342586245070522210378167334926343399070771296634\",\"5000000\",\"0\"]},{\"contractAddress\":\"0x022993789c33e54e0d296fc266a9c9a2e9dcabe2e48941f5fa1bd5692ac4a8c4\",\"entrypoint\":\"watch\",\"calldata\":[\"7405681\"]}]"
+}
+],
+"swap": {
+"id": "d7524a08-b894-4926-8972-5d6e6e222a39",
+"created_date": "2025-09-17T12:06:44.369351+00:00",
+"source_network": {
+"name": "STARKNET_MAINNET",
+"display_name": "Starknet",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/starknet_mainnet.png",
+"chain_id": "0x534e5f4d41494e",
+"node_url": "https://starknet-mainnet.public.blastapi.io/rpc/v0_8",
+"type": "starknet",
+"transaction_explorer_template": "https://voyager.online/tx/{0}",
+"account_explorer_template": "https://voyager.online/contract/{0}",
+"source_rank": 7,
+"destination_rank": 4,
+"token": {
+"symbol": "STRK",
+"display_asset": "STRK",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/strk.png",
+"contract": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+"decimals": 18,
+"price_in_usd": 0.131993,
+"precision": 8,
+"listing_date": "2024-07-10T14:51:41.783071+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"metadata": {
+"listing_date": "2022-05-28T20:00:00+00:00",
+"watchdog_contract": "0x022993789c33e54e0d296fc266a9c9a2e9dcabe2e48941f5fa1bd5692ac4a8c4"
+},
+"deposit_methods": [
+"wallet"
+]
+},
+"source_token": {
+"symbol": "USDC",
+"display_asset": "USDC",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/usdc.png",
+"contract": "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
+"decimals": 6,
+"price_in_usd": 0.999802,
+"precision": 6,
+"listing_date": "2023-03-13T13:26:21.210657+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"destination_network": {
+"name": "BASE_MAINNET",
+"display_name": "Base",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/base_mainnet.png",
+"chain_id": "8453",
+"node_url": "https://lb.nodies.app/v1/cd20f05d16d24649b06f0e834a4d91c4",
+"type": "evm",
+"transaction_explorer_template": "https://basescan.org/tx/{0}",
+"account_explorer_template": "https://basescan.org/address/{0}",
+"source_rank": 2,
+"destination_rank": 1,
+"token": {
+"symbol": "ETH",
+"display_asset": "ETH",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/eth.png",
+"contract": null,
+"decimals": 18,
+"price_in_usd": 4493.53,
+"precision": 8,
+"listing_date": "2023-08-02T10:56:49.590891+00:00",
+"source_rank": 1,
+"destination_rank": 1
+},
+"metadata": {
+"listing_date": "2023-08-01T20:00:00+00:00",
+"evm_oracle_contract": "0x420000000000000000000000000000000000000F",
+"evm_multicall_contract": "0xca11bde05977b3631167028862be2a173976ca11"
+}
+},
+"destination_token": {
+"symbol": "USDC",
+"display_asset": "USDC",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/usdc.png",
+"contract": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+"decimals": 6,
+"price_in_usd": 0.999802,
+"precision": 6,
+"listing_date": "2023-09-14T16:21:22.07463+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"requested_amount": 5,
+"destination_address": "0xb39b7c02372dbbb003c05d6b4aba2ec68842934d",
+"status": "user_transfer_pending",
+"fail_reason": null,
+"use_deposit_address": false,
+"metadata": {
+"sequence_number": 7405681
+},
+"transactions": []
+},
+"quote": {
+"source_network": {
+"name": "STARKNET_MAINNET",
+"display_name": "Starknet",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/starknet_mainnet.png",
+"chain_id": "0x534e5f4d41494e",
+"node_url": "https://starknet-mainnet.public.blastapi.io/rpc/v0_8",
+"type": "starknet",
+"transaction_explorer_template": "https://voyager.online/tx/{0}",
+"account_explorer_template": "https://voyager.online/contract/{0}",
+"source_rank": 7,
+"destination_rank": 4,
+"token": {
+"symbol": "STRK",
+"display_asset": "STRK",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/strk.png",
+"contract": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+"decimals": 18,
+"price_in_usd": 0.131993,
+"precision": 8,
+"listing_date": "2024-07-10T14:51:41.783071+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"metadata": {
+"listing_date": "2022-05-28T20:00:00+00:00",
+"watchdog_contract": "0x022993789c33e54e0d296fc266a9c9a2e9dcabe2e48941f5fa1bd5692ac4a8c4"
+},
+"deposit_methods": [
+"wallet"
+]
+},
+"source_token": {
+"symbol": "USDC",
+"display_asset": "USDC",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/usdc.png",
+"contract": "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
+"decimals": 6,
+"price_in_usd": 0.999802,
+"precision": 6,
+"listing_date": "2023-03-13T13:26:21.210657+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"destination_network": {
+"name": "BASE_MAINNET",
+"display_name": "Base",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/base_mainnet.png",
+"chain_id": "8453",
+"node_url": "https://lb.nodies.app/v1/cd20f05d16d24649b06f0e834a4d91c4",
+"type": "evm",
+"transaction_explorer_template": "https://basescan.org/tx/{0}",
+"account_explorer_template": "https://basescan.org/address/{0}",
+"source_rank": 2,
+"destination_rank": 1,
+"token": {
+"symbol": "ETH",
+"display_asset": "ETH",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/eth.png",
+"contract": null,
+"decimals": 18,
+"price_in_usd": 4493.53,
+"precision": 8,
+"listing_date": "2023-08-02T10:56:49.590891+00:00",
+"source_rank": 1,
+"destination_rank": 1
+},
+"metadata": {
+"listing_date": "2023-08-01T20:00:00+00:00",
+"evm_oracle_contract": "0x420000000000000000000000000000000000000F",
+"evm_multicall_contract": "0xca11bde05977b3631167028862be2a173976ca11"
+}
+},
+"destination_token": {
+"symbol": "USDC",
+"display_asset": "USDC",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/usdc.png",
+"contract": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+"decimals": 6,
+"price_in_usd": 0.999802,
+"precision": 6,
+"listing_date": "2023-09-14T16:21:22.07463+00:00",
+"source_rank": 0,
+"destination_rank": 0
+},
+"requested_amount": 0,
+"receive_amount": 4.485828,
+"fee_discount": 0,
+"min_receive_amount": 4.3736823,
+"blockchain_fee": 0.001572,
+"service_fee": 0.012501,
+"avg_completion_time": "00:00:25.6935420",
+"refuel_in_source": 0.500099,
+"slippage": 0.025,
+"total_fee": 0.014073,
+"total_fee_in_usd": 0.01407
+},
+"refuel": {
+"token": {
+"symbol": "ETH",
+"display_asset": "ETH",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/eth.png",
+"contract": null,
+"decimals": 18,
+"price_in_usd": 4493.53,
+"precision": 8,
+"listing_date": "2023-08-02T10:56:49.590891+00:00",
+"source_rank": 1,
+"destination_rank": 1
+},
+"network": {
+"name": "BASE_MAINNET",
+"display_name": "Base",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/networks/base_mainnet.png",
+"chain_id": "8453",
+"node_url": "https://lb.nodies.app/v1/cd20f05d16d24649b06f0e834a4d91c4",
+"type": "evm",
+"transaction_explorer_template": "https://basescan.org/tx/{0}",
+"account_explorer_template": "https://basescan.org/address/{0}",
+"source_rank": 2,
+"destination_rank": 1,
+"token": {
+"symbol": "ETH",
+"display_asset": "ETH",
+"logo": "https://prodlslayerswapbridgesa.blob.core.windows.net/layerswap/currencies/eth.png",
+"contract": null,
+"decimals": 18,
+"price_in_usd": 4493.53,
+"precision": 8,
+"listing_date": "2023-08-02T10:56:49.590891+00:00",
+"source_rank": 1,
+"destination_rank": 1
+},
+"metadata": {
+"listing_date": "2023-08-01T20:00:00+00:00",
+"evm_oracle_contract": "0x420000000000000000000000000000000000000F",
+"evm_multicall_contract": "0xca11bde05977b3631167028862be2a173976ca11"
+}
+},
+"amount": 0.00011127,
+"amount_in_usd": 0.4999950831
+},
+"reward": null
+}
+}
+
+
+
+
+***Paycrest api
+
+**get list of supported currencies
+
+const url = 'https://api.paycrest.io/v1/currencies';
+const options = {method: 'GET', body: undefined};
+
+try {
+const response = await fetch(url, options);
+const data = await response.json();
+console.log(data);
+} catch (error) {
+console.error(error);
+}
+
+
+
+{"status":"success","message":"OK","data":[{"code":"KES","name":"Kenyan Shilling","shortName":"KES","decimals":2,"symbol":"KSh","marketRate":"128.4"},{"code":"TZS","name":"Tanzanian Shilling","shortName":"TZS","decimals":2,"symbol":"TSh","marketRate":"2473"},{"code":"NGN","name":"Nigerian Naira","shortName":"Naira","decimals":2,"symbol":"₦","marketRate":"1507.93"},{"code":"UGX","name":"Ugandan Shilling","shortName":"UGX","decimals":2,"symbol":"USh","marketRate":"3498.94"},{"code":"GHS","name":"Ghana Cedi","shortName":"Cedi","decimals":2,"symbol":"GH¢","marketRate":"12.06"}]}
+
+
+**get list of supported bank institution for specfic currencies
+
+const url = 'https://api.paycrest.io/v1/institutions/NGN';
+const options = {method: 'GET', body: undefined};
+
+try {
+const response = await fetch(url, options);
+const data = await response.json();
+console.log(data);
+} catch (error) {
+console.error(error);
+}
+
+
+{"status":"success","message":"OK","data":[{"name":"Access Bank","code":"ABNGNGLA","type":"bank"},{"name":"Diamond Bank","code":"DBLNNGLA","type":"bank"},{"name":"Fidelity Bank","code":"FIDTNGLA","type":"bank"},{"name":"FCMB","code":"FCMBNGLA","type":"bank"},{"name":"First Bank Of Nigeria","code":"FBNINGLA","type":"bank"},{"name":"Guaranty Trust Bank","code":"GTBINGLA","type":"bank"},{"name":"Polaris Bank","code":"PRDTNGLA","type":"bank"},{"name":"Union Bank","code":"UBNINGLA","type":"bank"},{"name":"United Bank for Africa","code":"UNAFNGLA","type":"bank"},{"name":"Citibank","code":"CITINGLA","type":"bank"},{"name":"Ecobank Bank","code":"ECOCNGLA","type":"bank"},{"name":"Heritage","code":"HBCLNGLA","type":"bank"},{"name":"Keystone Bank","code":"PLNINGLA","type":"bank"},{"name":"Stanbic IBTC Bank","code":"SBICNGLA","type":"bank"},{"name":"Standard Chartered Bank","code":"SCBLNGLA","type":"bank"},{"name":"Sterling Bank","code":"NAMENGLA","type":"bank"},{"name":"Unity Bank","code":"ICITNGLA","type":"bank"},{"name":"Suntrust Bank","code":"SUTGNGLA","type":"bank"},{"name":"Providus Bank ","code":"PROVNGLA","type":"bank"},{"name":"FBNQuest Merchant Bank","code":"KDHLNGLA","type":"bank"},{"name":"Greenwich Merchant Bank","code":"GMBLNGLA","type":"bank"},{"name":"FSDH Merchant Bank","code":"FSDHNGLA","type":"bank"},{"name":"Rand Merchant Bank","code":"FIRNNGLA","type":"bank"},{"name":"Jaiz Bank","code":"JAIZNGLA","type":"bank"},{"name":"Zenith Bank","code":"ZEIBNGLA","type":"bank"},{"name":"Wema Bank","code":"WEMANGLA","type":"bank"},{"name":"Kuda Microfinance Bank","code":"KUDANGPC","type":"bank"},{"name":"OPay","code":"OPAYNGPC","type":"bank"},{"name":"PalmPay","code":"PALMNGPC","type":"bank"},{"name":"Paystack-Titan MFB","code":"PAYTNGPC","type":"bank"},{"name":"Moniepoint MFB","code":"MONINGPC","type":"bank"},{"name":"Safe Haven MFB","code":"SAHVNGPC","type":"bank"}]}
+
+**verify account details
+
+const url = 'https://api.paycrest.io/v1/verify-account';
+const options = {
+method: 'POST',
+headers: {'Content-Type': 'application/json'},
+body: '{"institution":"OPAYNGPC","accountIdentifier":"9082200051"}'
+};
+
+try {
+const response = await fetch(url, options);
+const data = await response.json();
+console.log(data);
+} catch (error) {
+console.error(error);
+}
+
+{"status":"success","message":"Account name was fetched successfully","data":"SOLOMON AUGUSTINE JOHN"}
+
+**get token rate
+
+
+const url = 'https://api.paycrest.io/v1/rates/{token}/{amount}/{fiat}';
+const options = {method: 'GET', body: undefined};
+
+try {
+const response = await fetch(url, options);
+const data = await response.json();
+console.log(data);
+} catch (error) {
+console.error(error);
+}
+
+
+const url = 'https://api.paycrest.io/v1/rates/USDC/5/NGN';
+const options = {method: 'GET', body: undefined};
+
+try {
+const response = await fetch(url, options);
+const data = await response.json();
+console.log(data);
+} catch (error) {
+console.error(error);
+}
+
+
+
+{"status":"success","message":"Rate fetched successfully","data":"1488.03"}
+
+**initiate order
+
+
+const url = 'https://api.paycrest.io/v1/sender/orders';
+const options = {
+method: 'POST',
+headers: {
+'API-Key': '1c595ee0,
+'Content-Type': 'application/json'
+},
+body: '{"amount":5,"token":"USDC","rate":1488.03,"network":"base","recipient":{"institution":"OPAYNGPC","accountIdentifier":"9082200051","accountName":"SOLOMON AUGUSTINE JOHN","memo":"payment from payboy","currency":"NGN"},"returnAddress":"0xb39b7c02372dBBb003c05D6b4ABA2eC68842934D"}'
+};
+
+try {
+const response = await fetch(url, options);
+const data = await response.json();
+console.log(data);
+} catch (error) {
+console.error(error);
+}
+
+{"status":"success","message":"Payment order initiated successfully","data":{"id":"d80df978-7cdb-4f2b-b0e4-93eac21ace76","amount":"5","token":"USDC","network":"base","receiveAddress":"0x5e4263E4c04836C4e00ae7DAa7E1b39B83C98882","validUntil":"2025-09-17T13:24:09.132437782Z","senderFee":"0.025","transactionFee":"0","reference":""}}
+
+**get order details
+
+const url = 'https://api.paycrest.io/v1/sender/orders/70273416-7f46-4ed8-8aca-b72bc3d306b3';
+const options = {
+method: 'GET',
+headers: {'API-Key': '1c595ee0'},
+body: undefined
+};
+
+try {
+const response = await fetch(url, options);
+const data = await response.json();
+console.log(data);
+} catch (error) {
+console.error(error);
+}
+
+
+
+{"status":"success","message":"The order has been successfully retrieved","data":{"id":"70273416-7f46-4ed8-8aca-b72bc3d306b3","amount":"5","amountPaid":"0","amountReturned":"0","token":"USDC","senderFee":"0.025","transactionFee":"0","rate":"1488.03","network":"base","gatewayId":"","recipient":{"institution":"OPay","accountIdentifier":"9082200051","accountName":"SOLOMON AUGUSTINE JOHN","memo":"payment from payboy","providerId":"","metadata":null,"currency":"NGN","nonce":""},"fromAddress":"","returnAddress":"0xb39b7c02372dBBb003c05D6b4ABA2eC68842934D","receiveAddress":"0x0a12CB7b95fc99d725D71afdf9dcb4918618df7E","feeAddress":"0xb39b7c02372dBBb003c05D6b4ABA2eC68842934D","reference":"","createdAt":"2025-09-17T12:29:49.707931Z","updatedAt":"2025-09-17T12:29:49.707932Z","txHash":"","status":"initiated","transactionLogs":[{"id":"55f65644-6668-4359-aab0-c38238e29941","gateway_id":"","status":"order_initiated","tx_hash":"","created_at":"2025-09-17T12:29:49.704986Z"}]}}
+
+
+**sample paycrest code flow but in this case we will using private key in the backend to sign transaction
+
+Include your API Key in the “API-Key” header of every request you make to Paycrest Offramp API.
+
+Copy
+const headers = {
+"API-Key": "208a4aef-1320-4222-82b4-e3bca8781b4b",
+};
+This is because requests without a valid API key will fail with status code 401: Unauthorized.
+​
+Creating Payment Orders
+​
+Step 1: Fetch the Rate
+Before creating a payment order, you must first fetch the current rate for your token/amount/currency combination. This ensures you’re using an up-to-date rate that’s achievable by the system.
+cURL
+JavaScript
+Python
+Go
+
+Copy
+// Fetch the current rate
+const fetchRate = async (token, amount, currency, network) => {
+const response = await fetch(
+`https://api.paycrest.io/v1/rates/${token}/${amount}/${currency}?network=${network}`,
+{
+method: "GET",
+headers: {
+"Content-Type": "application/json"
+}
+}
+);
+
+if (!response.ok) {
+throw new Error(`Rate fetch failed: ${response.statusText}`);
+}
+
+const rateData = await response.json();
+return rateData.data; // Returns the rate as a string
+};
+
+// Example usage
+const rate = await fetchRate("USDT", 100, "NGN", "base");
+console.log('Current rate:', rate); // e.g., "1500.50"
+The rate endpoint is publicly accessible and doesn’t require authentication. However, the rate you receive is only valid for a limited time and should be used immediately when creating your payment order.
+Always fetch a fresh rate before creating each payment order. Rates can fluctuate frequently, and using an outdated rate will cause your order creation to fail.
+​
+Step 2: Create the Payment Order
+Now that you have the current rate, you can create the payment order using that rate.
+cURL
+JavaScript
+Python
+Go
+
+Copy
+// First, fetch the current rate
+const rate = await fetchRate("USDT", 100, "NGN", "base");
+
+// Then create the payment order with the fetched rate
+const orderData = {
+amount: 100,
+token: 'USDT',
+network: 'base',
+rate: rate, // Use the fetched rate
+recipient: {
+institution: 'GTB',
+accountIdentifier: '1234567890',
+accountName: 'John Doe',
+currency: 'NGN',
+memo: 'Salary payment for January 2024' // Optional: Purpose/narration for the payment
+},
+reference: 'payment-123',
+returnAddress: '0x1234567890123456789012345678901234567890'
+};
+
+const response = await fetch("https://api.paycrest.io/v1/sender/orders", {
+method: "POST",
+headers: {
+"API-Key": "YOUR_API_KEY",
+"Content-Type": "application/json"
+},
+body: JSON.stringify(orderData)
+});
+
+const order = await response.json();
+console.log('Order created:', order);
+​
+Handle the Response
+JavaScript
+Python
+Go
+
+Copy
+// The response includes important information
+const {
+id, // Order ID for tracking
+receiveAddress, // Address to send tokens to
+validUntil, // Expiration time
+senderFee, // Fee amount
+transactionFee // Network transaction fee
+} = order;
+
+// Store the order ID for tracking
+await saveOrderToDatabase(order.id, order);
+​
+Send Tokens to Receive Address
+JavaScript
+Python
+Go
+
+Copy
+// Using viem to send tokens
+import { createPublicClient, createWalletClient, http, getContract, parseUnits } from 'viem';
+import { base } from 'viem/chains';
+import { privateKeyToAccount } from 'viem/accounts';
+
+const publicClient = createPublicClient({
+chain: base,
+transport: http('https://mainnet.base.org')
+});
+
+const account = privateKeyToAccount(process.env.PRIVATE_KEY);
+const walletClient = createWalletClient({
+account,
+chain: base,
+transport: http('https://mainnet.base.org')
+});
+
+// USDT contract on Base
+const usdtContract = getContract({
+address: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb', // USDT on Base
+abi: [{
+name: 'transfer',
+type: 'function',
+inputs: [
+{ name: 'to', type: 'address' },
+{ name: 'amount', type: 'uint256' }
+],
+outputs: [{ name: '', type: 'bool' }],
+stateMutability: 'nonpayable'
+}],
+publicClient,
+walletClient
+});
+
+// Send tokens to the receive address
+const { request } = await usdtContract.simulate.transfer({
+args: [order.receiveAddress, parseUnits(order.amount, 6)] // USDT has 6 decimals
+});
+
+const hash = await walletClient.writeContract(request);
+console.log('Transaction hash:', hash);
+The amount you send to the receive address should be the sum of amount, senderFee, and transactionFee as returned in the order response.
+​
+Order Status Monitoring
+Your status can either be any of the following:
+payment_order.pending - Order created, waiting for provider assignment
+payment_order.validated - Funds have been sent to recipient’s bank/mobile network (value transfer confirmed)
+payment_order.expired - Order expired without completion
+payment_order.settled - Order fully completed on blockchain
+payment_order.refunded - Funds refunded to sender
+Once you deploy your server and get the endpoint, you can listen to payment order events by configuring the Webhook URL in your dashboard settings. We trigger various events based on the status of the payment order. Our webhook events are sent exponentially until 24 hours from when the first one is sent.
+If pending, your frontend would have to continue polling till it gets back a conclusive response - either validated, expired, or refunded.
+You can tell your user the transaction was successful (or provide value) at the validated status, since this indicates funds have been sent to the recipient’s bank/mobile network. The settled status occurs when the provider has received the stablecoin on-chain, which is separate from the sender-to-recipient money flow.
+​
+Webhook Implementation
+JavaScript
+Python
+Go
+
+Copy
+// Server setup and webhook endpoint
+app.post("/webhook", async (req, res, next) => {
+const signature = req.get("X-Paycrest-Signature");
+if (!signature) return false;
+
+if (!verifyPaycrestSignature(req.body, signature, process.env.API_SECRET!)) {
+return res.status(401).send("Invalid signature");
+}
+console.log("Webhook received:", req.body);
+try {
+const transaction = await prisma.transaction.create({
+data: {
+id: req.body.data.id,
+status: req.body.event,
+},
+});
+res.json({ data: transaction });
+} catch (err) {
+next(err);
+}
+res.status(200).send("Webhook received");
+});
+
+function verifyPaycrestSignature(requestBody, signatureHeader, secretKey) {
+const calculatedSignature = calculateHmacSignature(requestBody, secretKey);
+return signatureHeader === calculatedSignature;
+}
+
+function calculateHmacSignature(data, secretKey) {
+const crypto = require('crypto');
+const key = Buffer.from(secretKey);
+const hash = crypto.createHmac("sha256", key);
+hash.update(data);
+return hash.digest("hex");
+}
+Webhook URLs are configured through the Sender Dashboard settings, not via API. Visit your dashboard to set up your webhook endpoint URL.
+​
+Polling Implementation
+JavaScript
+Python
+Go
+
+Copy
+// Status polling endpoint
+app.get("/transactions/:id", async (req, res, next) => {
+const { id } = req.params;
+const transaction = await prisma.transaction.findUnique({
+where: { id },
+});
+res.json({ data: transaction ? transaction : 'Non-existent transaction' });
+});
+
+// Poll for status updates
+async function checkOrderStatus(orderId) {
+try {
+const response = await fetch(`https://api.paycrest.io/v1/sender/orders/${orderId}`, {
+headers: { "API-Key": "YOUR_API_KEY" }
+});
+const order = await response.json();
+switch (order.status) {
+case 'pending':
+console.log('Order is pending provider assignment');
+break;
+case 'validated':
+console.log('Funds have been sent to recipient\'s bank/mobile network (value transfer confirmed)');
+await handleOrderValidated(order);
+break;
+case 'settled':
+console.log('Order has been settled on blockchain');
+await handleOrderSettled(order);
+break;
+case 'refunded':
+console.log('Order was refunded to the sender');
+await handleOrderRefunded(order);
+break;
+case 'expired':
+console.log('Order expired without completion');
+await handleOrderExpired(order);
+break;
+}
+return order;
+} catch (error) {
+console.error('Error checking order status:', error);
+throw error;
+}
+}
+​
+Error Handling
+​
+Rate Fetching Errors
+When fetching rates, you may encounter these common errors:
+400 Bad Request: Invalid token, amount, or currency combination
+404 Not Found: No provider available for the specified parameters
+Network Errors: Connection issues or timeouts
+JavaScript
+Python
+Go
+
+Copy
+async function fetchRateWithErrorHandling(token, amount, currency, network) {
+try {
+const response = await fetch(
+`https://api.paycrest.io/v1/rates/${token}/${amount}/${currency}?network=${network}`,
+{
+method: "GET",
+headers: {
+"Content-Type": "application/json"
+}
+}
+);
+
+if (!response.ok) {
+if (response.status === 400) {
+const errorData = await response.json();
+throw new Error(`Rate validation failed: ${errorData.message}`);
+} else if (response.status === 404) {
+throw new Error('No provider available for this token/amount/currency combination');
+} else {
+throw new Error(`Rate fetch failed: ${response.statusText}`);
+}
+}
+
+const rateData = await response.json();
+return rateData.data;
+} catch (error) {
+console.error('Error fetching rate:', error);
+throw error;
+}
+}
+​
+Order Creation Error Handling
+When creating payment orders, you may encounter these common errors:
+400 Bad Request: Invalid payload, missing required fields, or validation errors
+401 Unauthorized: Invalid or missing API key
+429 Too Many Requests: Rate limit exceeded
+500 Internal Server Error: Server-side issues
+
+Copy
+{
+"status": "error",
+"message": "Failed to validate payload",
+"data": {
+"field": "Rate",
+"message": "Provided rate 1500.00 is not achievable. Available rate is 1500.50"
+}
+}
+​
+API Error Handling
+JavaScript
+Python
+Go
+cURL
+
+Copy
+async function createPaymentOrder(orderData) {
+try {
+const response = await fetch("https://api.paycrest.io/v1/sender/orders", {
+method: "POST",
+headers: {
+"API-Key": "YOUR_API_KEY",
+"Content-Type": "application/json"
+},
+body: JSON.stringify(orderData)
+});
+
+if (!response.ok) {
+if (response.status === 400) {
+// Validation error
+const validationErrors = await response.json();
+throw new Error(`Validation failed: ${JSON.stringify(validationErrors)}`);
+} else if (response.status === 401) {
+// Authentication error
+throw new Error('Invalid API key');
+} else if (response.status === 429) {
+// Rate limit exceeded
+throw new Error('Rate limit exceeded. Please try again later.');
+} else {
+// Other errors
+throw new Error(`API error: ${response.statusText}`);
+}
+}
+
+return await response.json();
+} catch (error) {
+console.error('Error creating payment order:', error);
+throw error;
+}
+}
+​
+Retry Logic
+JavaScript
+Python
+Go
+cURL
+
+Copy
+async function createOrderWithRetry(orderData, maxRetries = 3) {
+for (let attempt = 1; attempt <= maxRetries; attempt++) {
+try {
+return await createPaymentOrder(orderData);
+} catch (error) {
+if (attempt === maxRetries) {
+throw error;
+}
+
+// Wait before retrying (exponential backoff)
+const delay = Math.pow(2, attempt) * 1000;
+await new Promise(resolve => setTimeout(resolve, delay));
+}
+}
+}
+​
+Production Considerations
+JavaScript
+Python
+Go
+cURL
+
+Copy
+// Use environment variables for sensitive data
+const config = {
+apiKey: process.env.PAYCREST_API_KEY,
+webhookSecret: process.env.PAYCREST_WEBHOOK_SECRET
+};
+
+// Validate webhook signatures
+app.post('/webhooks/paycrest', async (req, res) => {
+const signature = req.headers['x-paycrest-signature'];
+
+if (!validateWebhookSignature(req.body, signature, config.webhookSecret)) {
+return res.status(401).json({ error: 'Invalid signature' });
+}
+
+// Process webhook
+// ...
+});
+​
+Testing
+JavaScript
+Python
+Go
+
+Copy
+// Using Jest for testing
+describe('Paycrest Sender API Integration', () => {
+test('should create payment order successfully', async () => {
+const orderData = {
+amount: 100,
+token: 'USDT',
+network: 'base',
+rate: 1500.50,
+recipient: {
+institution: 'GTB',
+accountIdentifier: '1234567890',
+accountName: 'Test User',
+currency: 'NGN'
+}
+};
+
+const order = await createPaymentOrder(orderData);
+
+expect(order.id).toBeDefined();
+expect(order.receiveAddress).toBeDefined();
+expect(order.status).toBe('pending');
+});
+
+test('should handle API errors gracefully', async () => {
+const invalidOrderData = {
+amount: -100, // Invalid amount
+token: 'USDT',
+network: 'base',
+rate: 1500.50
+};
+
+await expect(createPaymentOrder(invalidOrderData))
+.rejects
+.toThrow('Validation failed');
+});
+});
+​
+Deployment Checklist
