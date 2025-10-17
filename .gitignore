@@ -17,3 +17,6 @@ package-lock.json
 **/.env*
 !**/.env.example
 
+# Ignore Next.js local environment file
+packages/nextjs/.env
+

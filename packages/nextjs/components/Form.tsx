@@ -225,25 +225,36 @@ const paycrestService = {
   getRate: async (
     token: string,
     amount: string,
-    currency: string,
-    network = 'base'
+    currency: string
   ): Promise<number> => {
     const response = await axios.get(
-      `/api/proxy?endpoint=/rates/${token}/${amount}/${currency}?network=${network}`
+      `/api/proxy?endpoint=/rates/${token}/${amount}/${currency}`
     );
     return response.data.data;
   },
 
   createOrder: async (orderData: any): Promise<any> => {
-    const response = await axios.post(
-      `${CONFIG.API.PAYCREST}/sender/orders`,
-      orderData,
-      {
-        headers: {
-          'API-Key': CONFIG.KEYS.PAYCREST,
-          'Content-Type': 'application/json',
-        },
-      }
+    // const response = await axios.post(
+      // `${CONFIG.API.PAYCREST}/sender/orders`,
+      // orderData,
+      // {
+      //   headers: {
+      //     'API-Key': CONFIG.KEYS.PAYCREST,
+      //     'Content-Type': 'application/json',
+      //   },
+      // }
+
+      const response = await axios.post(
+      `/api/proxy?endpoint=/sender/orders`,
+      orderData
+
+      );
+    return response.data.data;
+  },
+
+  getOrderDetails: async (orderId: string): Promise<any> => {
+    const response = await axios.get(
+      `/api/proxy?endpoint=/sender/orders/${orderId}`
     );
     return response.data.data;
   },
@@ -636,52 +647,98 @@ export default function StarknetOffRamp() {
   };
 
   const calculatePayout = async () => {
-    try {
-      let cryptoAmount = formData.amount;
+    if (!formData.amount || !formData.token || !formData.currency) return;
 
-      if (formData.isFiatInput) {
+    try {
+      let estimatedPayout = '';
+      let swapQuote = null;
+
+      // Get token decimals
+      const selectedToken = CONFIG.TOKENS.find(t => t.symbol === formData.token);
+      if (!selectedToken) {
+        throw new Error('Selected token not found in configuration');
+      }
+
+      if (!formData.isFiatInput) {
+        // Crypto input flow: First get layerswap quote
+        // Convert input amount to proper decimal places for the token
+        const inputAmount = (parseFloat(formData.amount) * Math.pow(10, selectedToken.decimals)).toString();
+        
+        const swap = await operation.execute(() =>
+          layerSwapService.createSwap({
+            sourceToken: formData.token,
+            destinationToken: formData.token,
+            amount: inputAmount,
+          })
+        );
+
+        if (swap) {
+          swapQuote = swap;
+          // Convert min receive amount back from token decimals
+          const minReceiveAmount = (parseFloat(swap.quote.min_receive_amount) / Math.pow(10, selectedToken.decimals)).toString();
+
+          // Get fiat conversion for the min receive amount
+          const payoutRate = await operation.execute(() =>
+            paycrestService.getRate(
+              formData.token,
+              minReceiveAmount,
+              formData.currency
+            )
+          );
+
+          if (payoutRate) {
+            estimatedPayout = (parseFloat(payoutRate.toString()) * parseFloat(minReceiveAmount)).toFixed(2);
+          }
+        }
+      } else {
+        // Fiat input flow: First get crypto amount
         const rate = await operation.execute(() =>
           paycrestService.getRate(formData.token, '1', formData.currency)
         );
+
         if (rate) {
-          cryptoAmount = (parseFloat(formData.amount) / parseFloat(rate.toString())).toString();
-        } else {
-          return;
+          // Convert fiat to crypto amount, accounting for token decimals
+          const cryptoAmount = (parseFloat(formData.amount) / parseFloat(rate.toString())).toString();
+          // Convert to token decimal places for the API
+          const adjustedCryptoAmount = (parseFloat(cryptoAmount) * Math.pow(10, selectedToken.decimals)).toString();
+
+          // Get layerswap quote for the crypto amount
+          const swap = await operation.execute(() =>
+            layerSwapService.createSwap({
+              sourceToken: formData.token,
+              destinationToken: formData.token,
+              amount: adjustedCryptoAmount,
+            })
+          );
+
+          if (swap) {
+            swapQuote = swap;
+            // Convert min receive amount back from token decimals
+            const minReceiveAmount = (parseFloat(swap.quote.min_receive_amount) / Math.pow(10, selectedToken.decimals)).toString();
+            
+            // Calculate final fiat amount
+            const payoutRate = await operation.execute(() =>
+              paycrestService.getRate(
+                formData.token,
+                minReceiveAmount,
+                formData.currency
+              )
+            );
+
+            if (payoutRate) {
+              estimatedPayout = (parseFloat(payoutRate.toString()) * parseFloat(minReceiveAmount)).toFixed(2);
+            }
+          }
         }
       }
 
-      const swap = await operation.execute(() =>
-        layerSwapService.createSwap({
-          sourceToken: formData.token,
-          destinationToken: formData.token,
-          amount: cryptoAmount,
-        })
-      );
+      // Update state with results
+      setAppState((prev) => ({
+        ...prev,
+        swapQuote,
+        estimatedPayout,
+      }));
 
-      if (swap) {
-        // Use min_receive_amount as specified in requirements
-        const minReceiveAmount = swap.quote.min_receive_amount;
-
-        // Get conversion rate for the min receive amount
-        const payoutRate = await operation.execute(() =>
-          paycrestService.getRate(
-            formData.token,
-            minReceiveAmount,
-            formData.currency
-          )
-        );
-
-        if (payoutRate) {
-          // Calculate final payout amount: rate * min_receive_amount
-          const payout = parseFloat(payoutRate.toString()) * parseFloat(minReceiveAmount);
-
-          setAppState((prev) => ({
-            ...prev,
-            swapQuote: swap,
-            estimatedPayout: payout.toFixed(2),
-          }));
-        }
-      }
     } catch (error) {
       console.error('Error calculating payout:', error);
       operation.execute(() => Promise.reject(error));
@@ -900,27 +957,34 @@ export default function StarknetOffRamp() {
                 <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Asset Value Type
                 </label>
-                <div className="flex space-x-4">
-                  <button
-                    onClick={() => updateFormData({ isFiatInput: false })}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      !formData.isFiatInput
-                        ? 'bg-gradient-to-r from-cyan-500 to-purple-600 text-white'
-                        : `${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
+                <div className="flex items-center justify-between p-2 rounded-xl bg-opacity-20 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}">
+                  <div className="flex items-center space-x-3">
+                    <span className={`text-sm font-medium ${!formData.isFiatInput ? (isDarkMode ? 'text-cyan-400' : 'text-cyan-600') : (isDarkMode ? 'text-gray-400' : 'text-gray-600')}`}>
+                      Crypto ({formData.token})
+                    </span>
+                  </div>
+                  
+                  {/* Toggle Switch */}
+                  <div 
+                    onClick={() => updateFormData({ isFiatInput: !formData.isFiatInput })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 cursor-pointer ${
+                      formData.isFiatInput 
+                        ? 'bg-gradient-to-r from-cyan-500 to-purple-600' 
+                        : (isDarkMode ? 'bg-gray-600' : 'bg-gray-300')
                     }`}
                   >
-                    Crypto ({formData.token})
-                  </button>
-                  <button
-                    onClick={() => updateFormData({ isFiatInput: true })}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      formData.isFiatInput
-                        ? 'bg-gradient-to-r from-cyan-500 to-purple-600 text-white'
-                        : `${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
-                    }`}
-                  >
-                    Fiat ({formData.currency || 'Select currency'})
-                  </button>
+                    <span 
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${
+                        formData.isFiatInput ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <span className={`text-sm font-medium ${formData.isFiatInput ? (isDarkMode ? 'text-cyan-400' : 'text-cyan-600') : (isDarkMode ? 'text-gray-400' : 'text-gray-600')}`}>
+                      Fiat {formData.currency ? `(${formData.currency})` : ''}
+                    </span>
+                  </div>
                 </div>
               </div>
 

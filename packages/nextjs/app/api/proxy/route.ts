@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     let baseUrl = '';
     let apiKey = '';
 
-    if (endpoint.startsWith('/currencies') || endpoint.startsWith('/institutions')) {
+    if (endpoint.startsWith('/currencies') || endpoint.startsWith('/institutions') || endpoint.startsWith('/rates')|| endpoint.startsWith('/sender')) {
       baseUrl = PAYCREST_API;
       apiKey = process.env.NEXT_PUBLIC_PAYCREST_API_KEY || '';
     } else if (endpoint.startsWith('/swaps')) {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     let baseUrl = '';
     let apiKey = '';
 
-    if (endpoint.startsWith('/verify-account') || endpoint.startsWith('/rates')) {
+    if (endpoint.startsWith('/verify-account') || endpoint.startsWith('/sender') ) {
       baseUrl = PAYCREST_API;
       apiKey = process.env.NEXT_PUBLIC_PAYCREST_API_KEY || '';
     } else if (endpoint.startsWith('/swaps')) {
