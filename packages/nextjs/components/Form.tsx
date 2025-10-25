@@ -647,7 +647,12 @@ export default function StarknetOffRamp() {
   };
 
   const calculatePayout = async () => {
-    if (!formData.amount || !formData.token || !formData.currency) return;
+    console.log('Starting calculatePayout with:', { amount: formData.amount, token: formData.token, currency: formData.currency });
+    
+    if (!formData.amount || !formData.token || !formData.currency) {
+      console.log('Missing required fields');
+      return;
+    }
 
     try {
       let estimatedPayout = '';
@@ -656,13 +661,23 @@ export default function StarknetOffRamp() {
       // Get token decimals
       const selectedToken = CONFIG.TOKENS.find(t => t.symbol === formData.token);
       if (!selectedToken) {
+        console.error('Token not found:', formData.token);
         throw new Error('Selected token not found in configuration');
       }
+      
+      console.log('Selected token:', selectedToken);
 
       if (!formData.isFiatInput) {
         // Crypto input flow: First get layerswap quote
         // Convert input amount to proper decimal places for the token
-        const inputAmount = (parseFloat(formData.amount) * Math.pow(10, selectedToken.decimals)).toString();
+        // Format amount with proper decimals for the token
+        const parsedAmount = parseFloat(formData.amount);
+        if (isNaN(parsedAmount)) {
+          throw new Error('Invalid amount format');
+        }
+        const inputAmount = parsedAmount.toString();
+        
+        console.log('Creating swap with amount:', { original: formData.amount, formatted: inputAmount });
         
         const swap = await operation.execute(() =>
           layerSwapService.createSwap({
@@ -671,24 +686,34 @@ export default function StarknetOffRamp() {
             amount: inputAmount,
           })
         );
+        
+        console.log('Swap response:', swap);
 
-        if (swap) {
-          swapQuote = swap;
-          // Convert min receive amount back from token decimals
-          const minReceiveAmount = (parseFloat(swap.quote.min_receive_amount) / Math.pow(10, selectedToken.decimals)).toString();
+          if (swap) {
+            swapQuote = swap;
+            console.log('Received swap quote:', swap.quote);
+            
+            const minReceiveAmount = swap.quote.min_receive_amount;
+            console.log('Min receive amount:', minReceiveAmount);
 
-          // Get fiat conversion for the min receive amount
-          const payoutRate = await operation.execute(() =>
-            paycrestService.getRate(
-              formData.token,
-              minReceiveAmount,
-              formData.currency
-            )
-          );
-
-          if (payoutRate) {
-            estimatedPayout = (parseFloat(payoutRate.toString()) * parseFloat(minReceiveAmount)).toFixed(2);
-          }
+            // Get fiat conversion for the min receive amount
+            const payoutRate = await operation.execute(() =>
+              paycrestService.getRate(
+                formData.token,
+                minReceiveAmount,
+                formData.currency
+              )
+            );
+            console.log('Received payout rate:', payoutRate);          if (payoutRate) {
+              const calculation = parseFloat(minReceiveAmount) * parseFloat(payoutRate.toString());
+              estimatedPayout = calculation.toFixed(2);
+              console.log('Calculated payout:', {
+                minReceiveAmount,
+                rate: payoutRate,
+                calculation,
+                estimatedPayout
+              });
+            }
         }
       } else {
         // Fiat input flow: First get crypto amount
@@ -726,23 +751,40 @@ export default function StarknetOffRamp() {
             );
 
             if (payoutRate) {
-              estimatedPayout = (parseFloat(payoutRate.toString()) * parseFloat(minReceiveAmount)).toFixed(2);
+              const calculation = parseFloat(minReceiveAmount) * parseFloat(payoutRate.toString());
+              estimatedPayout = calculation.toFixed(2);
+              console.log('Calculated payout:', {
+                minReceiveAmount,
+                rate: payoutRate,
+                calculation,
+                estimatedPayout
+              });
             }
           }
         }
       }
 
       // Update state with results
-      setAppState((prev) => ({
-        ...prev,
-        swapQuote,
-        estimatedPayout,
-      }));
+      console.log('Updating state with:', { swapQuote, estimatedPayout });
+      
+      setAppState(prev => {
+        const newState = {
+          ...prev,
+          swapQuote,
+          estimatedPayout: estimatedPayout || '',
+        };
+        console.log('New app state:', newState);
+        return newState;
+      });
 
     } catch (error) {
       console.error('Error calculating payout:', error);
       operation.execute(() => Promise.reject(error));
     }
+    
+    // Log final state
+    console.log('Current form data:', formData);
+    console.log('Current app state:', appState);
   };
 
   // const handleWalletConnect = async () => {
@@ -1001,7 +1043,7 @@ export default function StarknetOffRamp() {
 
               {/* Payout Display */}
               <PayoutDisplay
-                amount={appState.estimatedPayout}
+                amount={appState.estimatedPayout || ''}
                 currency={formData.currency}
                 loading={operation.loading}
               />
