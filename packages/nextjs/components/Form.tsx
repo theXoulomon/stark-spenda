@@ -6,6 +6,10 @@ import { Address } from "@starknet-react/chains";
 import { useAccount } from "~~/hooks/useAccount";
 import { TokenBalance } from "~~/components/scaffold-stark/TokenBalance";
 import { useTheme } from "next-themes";
+import { checkGaslessCompatibility, executeGaslessCalls } from "~~/utils/gasless";
+import { pollLayerSwapStatus } from "~~/utils/layerswap";
+import { LayerSwapStatus } from "~~/types/layerswap";
+import { toast, Toaster } from 'react-hot-toast';
 
 // ==================== TYPES ====================
 interface Token {
@@ -24,25 +28,6 @@ interface Currency {
 interface Institution {
   code: string;
   name: string;
-}
-
-interface SwapQuote {
-  id: string;
-  quote: {
-    min_receive_amount: string;
-    receive_amount: string;
-    blockchain_fee: number;
-    service_fee: number;
-    total_fee: number;
-    total_fee_in_usd: number;
-  };
-  deposit_actions: Array<{
-    type: string;
-    to_address: string;
-    amount: number;
-    amount_in_base_units: string;
-    call_data: string;
-  }>;
 }
 
 interface WalletState {
@@ -174,7 +159,7 @@ const layerSwapService = {
     sourceToken: string;
     destinationToken: string;
     amount: string;
-  }): Promise<SwapQuote> => {
+  }): Promise<any> => {
     const response = await axios.post(
       `/api/proxy?endpoint=/swaps`,
       {
@@ -182,7 +167,7 @@ const layerSwapService = {
         source_token: params.sourceToken,
         destination_token: params.destinationToken,
         destination_network: CONFIG.NETWORKS.DESTINATION,
-        refuel: true,
+        refuel: false,
         amount: Number(params.amount),
         destination_address: CONFIG.BASE_ADDRESS,
       }
@@ -305,28 +290,7 @@ const useAsyncOperation = () => {
   return { loading, error, execute, reset };
 };
 
-const useStarknetWallet = () => {
-  const { account, address, status, isConnected } = useAccount();
 
-  const executeTransaction = useCallback(
-    async (calls: any[]) => {
-      if (!account) {
-        throw new Error('Wallet not connected');
-      }
-
-      const result = await account.execute(calls);
-      return result;
-    },
-    [account]
-  );
-
-  return {
-    instance: account,
-    address,
-    isConnected,
-    executeTransaction,
-  };
-};
 
 // ==================== UI COMPONENTS ====================
 const Button = ({
@@ -551,11 +515,13 @@ const PayoutDisplay = ({
   );
 };
 
+
+
 // ==================== MAIN COMPONENT ====================
 export default function StarknetOffRamp() {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark";
-  const wallet = useStarknetWallet();
+  const { account, address, isConnected } = useAccount();
   const operation = useAsyncOperation();
 
   const [formData, setFormData] = useState<TradeFormData>({
@@ -569,11 +535,34 @@ export default function StarknetOffRamp() {
     showAccountName: false,
   });
 
-  const [appState, setAppState] = useState({
-    currencies: [] as Currency[],
-    institutions: [] as Institution[],
+  interface AppState {
+    currencies: Currency[];
+    institutions: Institution[];
+    estimatedPayout: string;
+    swap: {
+      swap?: {
+        id: string;
+        quote: {
+          min_receive_amount: string;
+        };
+      };
+      quote?: {
+        min_receive_amount: string;
+      };
+    };
+    selectedTokenBalance: string;
+    swapQuote?: {
+      quote: {
+        min_receive_amount: string;
+      };
+    };
+  }
+
+  const [appState, setAppState] = useState<AppState>({
+    currencies: [],
+    institutions: [],
     estimatedPayout: '',
-    swapQuote: null as SwapQuote | null,
+    swap: {},
     selectedTokenBalance: '',
   });
 
@@ -605,10 +594,10 @@ export default function StarknetOffRamp() {
 
   // Update token balance when token changes
   useEffect(() => {
-    if (wallet.address && formData.token) {
+    if (address && formData.token) {
       updateTokenBalance();
     }
-  }, [formData.token, wallet.address]);
+  }, [formData.token, address]);
 
   const updateFormData = (updates: Partial<TradeFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -656,7 +645,7 @@ export default function StarknetOffRamp() {
 
     try {
       let estimatedPayout = '';
-      let swapQuote = null;
+      // let swapQuote = null;
 
       // Get token decimals
       const selectedToken = CONFIG.TOKENS.find(t => t.symbol === formData.token);
@@ -690,7 +679,8 @@ export default function StarknetOffRamp() {
         console.log('Swap response:', swap);
 
           if (swap) {
-            swapQuote = swap;
+            setAppState((prev) => ({ ...prev, swap }));
+
             console.log('Received swap quote:', swap.quote);
             
             const minReceiveAmount = swap.quote.min_receive_amount;
@@ -718,7 +708,7 @@ export default function StarknetOffRamp() {
       } else {
         // Fiat input flow: First get crypto amount
         const rate = await operation.execute(() =>
-          paycrestService.getRate(formData.token, '1', formData.currency)
+          paycrestService.getRate(formData.token, '100', formData.currency)
         );
 
         if (rate) {
@@ -737,7 +727,7 @@ export default function StarknetOffRamp() {
           );
 
           if (swap) {
-            swapQuote = swap;
+            // swapQuote = swap;
             // Convert min receive amount back from token decimals
             const minReceiveAmount = (parseFloat(swap.quote.min_receive_amount) / Math.pow(10, selectedToken.decimals)).toString();
             
@@ -765,12 +755,12 @@ export default function StarknetOffRamp() {
       }
 
       // Update state with results
-      console.log('Updating state with:', { swapQuote, estimatedPayout });
+      console.log('Updating state with:', { estimatedPayout });
       
       setAppState(prev => {
         const newState = {
           ...prev,
-          swapQuote,
+          // swapQuote,
           estimatedPayout: estimatedPayout || '',
         };
         console.log('New app state:', newState);
@@ -787,77 +777,155 @@ export default function StarknetOffRamp() {
     console.log('Current app state:', appState);
   };
 
-  // const handleWalletConnect = async () => {
-  //   // Wallet connection is handled by the useAccount hook and wallet provider
-  //   // No need for manual connect call
-  // };
 
   const handleTrade = async () => {
-    if (!wallet.instance || !appState.swapQuote) return;
+    if (!account || !appState.swap?.swap?.id || !address) {
+      console.error('Missing required data:', { 
+        account: !!account, 
+        address,
+        swapId: appState.swap?.swap?.id 
+      });
+      toast.error('Please connect your wallet and enter trade details');
+      return;
+    }
 
     const result = await operation.execute(async () => {
+
+
       // Get swap details to get call data
-      const swapDetails = await layerSwapService.getSwapDetails(
-        appState.swapQuote!.id
-      );
-      const callData = swapDetails.deposit_actions[0].call_data;
+      const swapId = appState.swap.swap?.id;
+      if (!swapId) throw new Error('Missing swap ID');
 
+      const swapDetails = await layerSwapService.getSwapDetails(swapId);
+      const callData = JSON.parse(swapDetails.deposit_actions[0].call_data);
+      
       // Convert call data to hex format
-      const calls = [
-        {
-          contractAddress: formatters.decimalToHex(
-            callData.contract_address,
-            64
-          ),
-          entrypoint: callData.entrypoint,
-          calldata: callData.calldata.map((item: number) =>
-            formatters.decimalToHex(item, 0)
-          ),
-        },
-      ];
+      const calls = callData.map((call: any) => ({
+        contractAddress: call.contractAddress,
+        entrypoint: call.entrypoint,
+        calldata: call.calldata.map(String),
+      }));
 
-      console.log('Executing Starknet transaction with calls:', calls);
+      console.log('Processing transaction with calls:', calls);
 
-      // Sign and execute transaction on Starknet
-      const txResult = await wallet.executeTransaction(calls);
-      console.log('Starknet transaction result:', txResult);
+      let txResult;
 
-      // Create Paycrest order
-      const orderData = {
-        amount: parseFloat(appState.swapQuote!.quote.min_receive_amount),
-        token: formData.token,
-        rate: parseFloat(appState.estimatedPayout) / parseFloat(appState.swapQuote!.quote.min_receive_amount),
-        network: 'base',
-        recipient: {
-          institution: formData.bank,
-          accountIdentifier: formData.accountNumber,
-          accountName: formData.accountName,
-          currency: formData.currency,
-        },
-        returnAddress: CONFIG.BASE_ADDRESS,
-      };
+      // First check if the account is compatible with gasless transactions
+        const isGaslessCompatible = await checkGaslessCompatibility(address);
+        console.log('Gasless compatibility check:', isGaslessCompatible);
+        
+      try {
+        if (!isGaslessCompatible) {
+          toast.error('Your account is not compatible with gasless transactions. Please deploy your account first.');
+          return null;
+        }
+      } catch (error: any) {
+        if (error.message.includes('Account not deployed')) {
+          toast.error('Your account is not deployed. Please deploy your account first.');
+          return null;
+        }
+        toast.error('Failed to check gasless compatibility: ' + error.message);
+        return null;
+      }
 
-      console.log('Creating Paycrest order with data:', orderData);
-      const paycrestOrder = await paycrestService.createOrder(orderData);
-      console.log('Paycrest order created:', paycrestOrder);
+      try {
+        if (isGaslessCompatible) {
+          // Execute gasless transaction
+          toast.loading('Executing gasless transaction...');
+          console.log('Executing gasless transaction...');
+          txResult = await executeGaslessCalls(account, calls);
+          toast.success('Gasless transaction executed successfully!');
+        } else {
+          // Fall back to regular transaction
+          toast.loading('Executing regular transaction...');
+          console.log('Account not compatible with gasless transactions, using regular execution...');
+          txResult = await account.execute(calls);
+          toast.success('Transaction executed successfully!');
+        }
+        
+        console.log('Transaction result:', txResult);
+      } catch (error: any) {
+        console.error('Transaction failed:', error);
+        toast.error(`Transaction failed: ${error.message || 'Unknown error'}`);
+        return null;
+      }
 
-      // The base transfer will be handled by the backend with private key
-      // For now, we'll just return the order info
-      return {
-        success: true,
-        orderId: paycrestOrder.id,
-        receiveAddress: paycrestOrder.receiveAddress,
-        message: 'Off-ramp trade initiated successfully. Funds will be transferred to your bank account.'
-      };
+      // Get min receive amount from the swap quote
+      const minReceiveAmount = appState.swap?.quote?.min_receive_amount || 
+                             appState.swap?.swap?.quote?.min_receive_amount;
+      if (!minReceiveAmount) throw new Error('Could not determine receive amount');
+
+      // Start monitoring the Layerswap transaction status
+      toast.loading('Monitoring transaction status...', { id: 'status-monitor' });
+      
+      try {
+        const finalStatus = await pollLayerSwapStatus(swapId, (status) => {
+          switch (status) {
+            case 'user_transfer_pending':
+              toast.loading('Waiting for your transfer...', { id: 'status-monitor' });
+              break;
+            case 'ls_transfer_pending':
+              toast.loading('Processing your transfer...', { id: 'status-monitor' });
+              break;
+            case 'completed':
+              toast.success('Transfer completed successfully!', { id: 'status-monitor' });
+              break;
+            case 'failed':
+              toast.error('Transfer failed. Please try again.', { id: 'status-monitor' });
+              break;
+            case 'cancelled':
+              toast.error('Transfer was cancelled.', { id: 'status-monitor' });
+              break;
+            case 'expired':
+              toast.error('Transfer expired. Please try again.', { id: 'status-monitor' });
+              break;
+          }
+        });
+
+        // Only proceed with Paycrest order if Layerswap transfer completed successfully
+        if (finalStatus.data.status === 'completed') {
+          // Create Paycrest order
+          const orderData = {
+            amount: parseFloat(minReceiveAmount),
+            token: formData.token,
+            rate: parseFloat(appState.estimatedPayout) / parseFloat(minReceiveAmount),
+            network: 'base',
+            recipient: {
+              institution: formData.bank,
+              accountIdentifier: formData.accountNumber,
+              accountName: formData.accountName,
+              currency: formData.currency,
+            },
+            returnAddress: CONFIG.BASE_ADDRESS,
+          };
+
+          console.log('Creating Paycrest order with data:', orderData);
+          const paycrestOrder = await paycrestService.createOrder(orderData);
+          console.log('Paycrest order created:', paycrestOrder);
+
+          return {
+            success: true,
+            orderId: paycrestOrder.id,
+            receiveAddress: paycrestOrder.receiveAddress,
+            message: 'Off-ramp trade completed successfully. Funds will be transferred to your bank account.'
+          };
+        } else {
+          throw new Error(`Layerswap transfer ${finalStatus.data.status}`);
+        }
+      } catch (error: any) {
+        console.error('Error during transaction monitoring:', error);
+        toast.error(`Transaction failed: ${error.message}`, { id: 'status-monitor' });
+        return null;
+      }
     });
 
     if (result) {
-      alert(`Off-ramp trade initiated successfully! Order ID: ${result.orderId}\n${result.message}`);
+      toast.success(`Off-ramp trade initiated successfully! Order ID: ${result.orderId}`);
     }
   };
 
   const isFormValid =
-    wallet.isConnected &&
+    isConnected &&
     formData.currency &&
     formData.bank &&
     formData.accountNumber &&
@@ -866,6 +934,23 @@ export default function StarknetOffRamp() {
 
   return (
     <div className={`min-h-screen p-4 ${isDarkMode ? 'bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-800' : 'bg-gradient-to-br from-blue-50 via-cyan-50/30 to-indigo-100'}`}>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          success: {
+            style: {
+              background: isDarkMode ? '#064e3b' : '#dcfce7',
+              color: isDarkMode ? '#ffffff' : '#000000',
+            },
+          },
+          error: {
+            style: {
+              background: isDarkMode ? '#7f1d1d' : '#fee2e2',
+              color: isDarkMode ? '#ffffff' : '#000000',
+            },
+          },
+        }}
+      />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -883,7 +968,7 @@ export default function StarknetOffRamp() {
         <Card>
           {/* Wallet Connection */}
           <div className="mb-6">
-            {!wallet.isConnected && (
+            {!isConnected && (
               <div className="flex items-center justify-center mb-4 w-full">
                 <label className={`text-lg font-semibold bg-gradient-to-r from-cyan-500 to-purple-600 bg-clip-text text-transparent transform transition-all text-center ${isDarkMode ? 'hover:text-gray-300' : 'hover:text-gray-700'}`}>
                   Your Gateway to Liquidating Starknet Asset to Fiat
@@ -892,7 +977,7 @@ export default function StarknetOffRamp() {
             )}
           </div>
 
-          {wallet.isConnected && (
+          {isConnected && (
             <>
               {/* Token Selection */}
               <Select
@@ -906,7 +991,7 @@ export default function StarknetOffRamp() {
               />
 
               {/* Token Balance Display */}
-              {wallet.address && formData.token && (
+              {address && formData.token && (
                 <div className="mb-4">
                   <div className={`${isDarkMode ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg py-2 px-4 border ${isDarkMode ? 'border-cyan-500/20' : 'border-cyan-200'} flex items-center`}>
                     <div className="flex items-center space-x-3">
@@ -928,7 +1013,7 @@ export default function StarknetOffRamp() {
                         }}
                       />
                       <TokenBalance
-                        address={wallet.address}
+                        address={address}
                         tokenTicker={formData.token}
                         className={`text-lg font-semibold ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`}
                       />
